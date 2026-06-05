@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'ACCOUNTING',
+    'BUDGET',
+    'ASSESSOR',
+    'HEALTH',
+    'ENGINEERING',
+    'MENRO',
+    'MSWDO',
+    'MCR',
+    'EXECUTIVE',
+    'MPDO',
+    'ADMINISTRATOR',
+    'AGRICULTURE',
+    'SB MEMBER',
+    'SB SECRETARY',
+    'TREASURY',
+    'VICE MAYOR',
+    'MARKET',
+    'TOLL ROAD',
+    'WATERSYSTEM',
+    'MEDICAL',
+    'PESO',
+    'NATIONAL AGENCY',
+    "BARANGAY'S",
+    'HRMO',
+];
