@@ -45,28 +45,22 @@ class MasterController extends Controller
         return $base64ImageWithType;
     }
 
-    protected function _idConverter($data, $isDecrypt=0)
+    protected function _idConverter($data, $isDecrypt = 0)
     {
-
-        $magicNum1 = 123;
-        $magicNum2 = 45;
-        $pad = "700";
-
-        // encrypt
-        if (!$isDecrypt) {
-            $data = $pad.($data*$magicNum1)+$magicNum2;
-        } else {
-            if (strlen($data)>3) {
-                $data = substr($data, 3);
-                $data = $data-$magicNum2;
-                $data = $data/$magicNum1;
-            } else {
-                return 0;
+        if (! $isDecrypt) {
+            try {
+                return Crypt::encryptString((string) $data);
+            } catch (\Exception $e) {
+                return $data;
             }
         }
 
-        return $data;
-
+        try {
+            $decrypted = Crypt::decryptString($data);
+            return is_numeric($decrypted) ? (int) $decrypted : 0;
+        } catch (DecryptException $e) {
+            return null;
+        }
     }
 
     protected function _decryptID($id)

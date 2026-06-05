@@ -13,7 +13,26 @@ class Employee extends Model
 {
     use Auditable;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'employee_code',
+        'full_name',
+        'surname',
+        'first_name',
+        'middle_name',
+        'name_extension',
+        'nickname',
+        'job_order',
+        'position_title',
+        'office',
+        'is_active',
+        'sex_at_birth',
+        'source_file',
+        'qr_code_path',
+        'profile_photo_path',
+        'e_signature_path',
+        'created_by',
+        'user_id',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

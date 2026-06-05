@@ -9,12 +9,14 @@ class AdminOfficeController extends Controller
 {
     public function store(Request $request)
     {
+        $request->merge(['name' => strtoupper(trim($request->name))]);
+
         $request->validate([
             'name' => 'required|string|max:255|unique:offices,name',
         ]);
 
         Office::create([
-            'name' => strtoupper(trim($request->name)),
+            'name' => $request->name,
         ]);
 
         return redirect()->back()->with('success', 'Office added successfully.');

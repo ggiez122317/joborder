@@ -8,7 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Training extends Model
 {
     protected $table = 'trainings';
-    protected $guarded = [];
+    protected $fillable = [
+        'employee_id',
+        'title',
+        'date_from',
+        'date_to',
+        'number_of_hours',
+        'type_of_ld',
+        'conducted_sponsored_by',
+        'sort_order',
+    ];
 
     public function employee(): BelongsTo
     {

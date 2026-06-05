@@ -8,7 +8,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OtherInformation extends Model
 {
     protected $table = 'other_information';
-    protected $guarded = [];
+    protected $fillable = [
+        'employee_id',
+        'special_skills_hobbies',
+        'non_academic_distinctions',
+        'memberships',
+        'questions',
+        'references',
+        'government_id_type',
+        'government_id_no',
+        'government_id_date_place_issued',
+        'date_accomplished',
+        'signature_name',
+        'visibility',
+    ];
 
     protected $casts = [
         'special_skills_hobbies' => 'array',

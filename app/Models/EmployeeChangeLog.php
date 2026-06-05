@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeChangeLog extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'employee_id',
+        'user_id',
+        'event',
+        'changes',
+    ];
 
     protected $casts = [
         'changes' => 'array',

@@ -308,7 +308,7 @@ class EmployeeController extends Controller
     public function parseUpload(Request $request): View|RedirectResponse
     {
         $validated = $request->validate([
-            'pds_file' => ['required', 'file', 'mimes:xlsx,pdf', 'max:10240'],
+            'pds_file' => ['required', 'file', 'mimes:xlsx', 'max:10240'],
         ]);
 
         $file = $validated['pds_file'];

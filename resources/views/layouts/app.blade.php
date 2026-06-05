@@ -190,6 +190,14 @@
                         </svg>
                         <span class="sidebar-label">My Records</span>
                     </a>
+                    <a href="{{ route('user.report-analytics') }}"
+                        class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('user.report-analytics') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">
+                        <svg viewBox="0 0 16 16" class="h-[14px] w-[14px] stroke-current shrink-0" fill="none" aria-hidden="true">
+                            <path d="M2.5 12.5V9.5M8 12.5v-9M13.5 12.5v-6" stroke-width="1.4" stroke-linecap="round"></path>
+                            <path d="M1.5 13.5h13" stroke-width="1.2" stroke-linecap="round"></path>
+                        </svg>
+                        <span class="sidebar-label">Report Analytics</span>
+                    </a>
                     <div class="sidebar-label mt-[10px] px-2 pb-1 pt-2 text-[10px] uppercase tracking-[0.08em] text-[#94a3b8]">Info</div>
                     <a href="{{ route('user.offices') }}"
                         class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('user.offices') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">
@@ -273,33 +281,33 @@
                     <div class="flex flex-wrap items-center gap-3">
                         @if ($authUser)
                         @php
-                            $notifQuery = \App\Models\SystemAuditLog::query()
-                                ->whereIn('action', [
-                                    'user-pds-create', 
-                                    'user-pds-update', 
-                                    'employee-created', 
-                                    'employee-updated', 
-                                    'importhistory-created',
-                                    'user-pds-upload-review', 
-                                    'admin-pds-return-incomplete'
-                                ])
-                                ->latest();
-                            
-                            if (auth()->user()->isAdmin()) {
-                                // For admins, only show actions performed by users, 
-                                // or system-wide alerts like returns.
-                                $notifQuery->where(function($q) {
-                                    $q->where('user_role', 'user')
-                                      ->orWhere('action', 'admin-pds-return-incomplete')
-                                      ->orWhere('action', 'importhistory-created');
-                                });
-                            } elseif (auth()->user()->isUser()) {
-                                $notifQuery
-                                    ->where('action', 'admin-pds-return-incomplete')
-                                    ->where('context->recipient_user_id', auth()->id());
-                            }
+                            $globalNotifications = \Illuminate\Support\Facades\Cache::remember('notifications_' . auth()->id(), 60, function() {
+                                $notifQuery = \App\Models\SystemAuditLog::query()
+                                    ->whereIn('action', [
+                                        'user-pds-create', 
+                                        'user-pds-update', 
+                                        'employee-created', 
+                                        'employee-updated', 
+                                        'importhistory-created',
+                                        'user-pds-upload-review', 
+                                        'admin-pds-return-incomplete'
+                                    ])
+                                    ->latest();
+                                
+                                if (auth()->user()->isAdmin()) {
+                                    $notifQuery->where(function($q) {
+                                        $q->where('user_role', 'user')
+                                          ->orWhere('action', 'admin-pds-return-incomplete')
+                                          ->orWhere('action', 'importhistory-created');
+                                    });
+                                } elseif (auth()->user()->isUser()) {
+                                    $notifQuery
+                                        ->where('action', 'admin-pds-return-incomplete')
+                                        ->where('context->recipient_user_id', auth()->id());
+                                }
 
-                            $globalNotifications = $notifQuery->limit(15)->get();
+                                return $notifQuery->limit(15)->get();
+                            });
                             $globalUnreadCount = $globalNotifications->where('read_at', null)->count();
                         @endphp
 

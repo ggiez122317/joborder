@@ -21,7 +21,7 @@
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-xl font-bold uppercase">{{ $isAdmin ? 'Upload PDS File' : 'Test Upload Mockup PDS' }}</h1>
-            <p class="text-sm font-semibold">Accepted files: Excel .xlsx or PDF.</p>
+            <p class="text-sm font-semibold">Accepted file: Excel (.xlsx)</p>
         </div>
         <div class="flex flex-wrap gap-2">
             @if ($isUserPds)
@@ -43,7 +43,7 @@
             @csrf
             <div>
                 <label class="form-label" for="pds_file">{{ $isAdmin ? 'PDS Excel or PDF File' : 'Mockup PDS Excel or PDF File' }}</label>
-                <input id="pds_file" type="file" name="pds_file" accept=".xlsx,.pdf" class="form-input">
+                <input id="pds_file" type="file" name="pds_file" accept=".xlsx" class="form-input">
                 @error('pds_file')
                     <p class="mt-1 text-xs font-semibold text-red-600">{{ $message }}</p>
                 @enderror

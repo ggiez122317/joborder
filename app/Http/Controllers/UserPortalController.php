@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View as ViewContract;
 use Illuminate\View\View;
 use Throwable;
@@ -37,31 +38,24 @@ class UserPortalController extends Controller
         $employee = $this->employeeForUser($request);
         $userId = $request->user()->id;
 
-        $totalEmployees = Employee::where('created_by', $userId)->count();
-        $maleCount = Employee::where('created_by', $userId)->where('sex_at_birth', 'Male')->count();
-        $femaleCount = Employee::where('created_by', $userId)->where('sex_at_birth', 'Female')->count();
-        $otherCount = Employee::where('created_by', $userId)->whereNotIn('sex_at_birth', ['Male', 'Female'])->orWhereNull('sex_at_birth')->where('created_by', $userId)->count();
-
-        $jobOrderCount = Employee::where('created_by', $userId)->where(function($query) {
-            $query->whereNotNull('job_order')
-                  ->whereNotIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None'])
-                  ->orWhereHas('latestWorkExperience', function($q) {
-                      $q->where('status_of_appointment', 'like', '%job order%');
-                  });
-        })->count();
-
-        $regularCount = Employee::where('created_by', $userId)->whereDoesntHave('latestWorkExperience', function($q) {
-            $q->where('status_of_appointment', 'like', '%job order%');
-        })->where(function($q) {
-            $q->whereNull('job_order')
-              ->orWhereIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None']);
-        })->whereHas('latestWorkExperience', function($q) {
-            $q->where('status_of_appointment', 'like', '%regular%')
-              ->orWhere('status_of_appointment', 'like', '%permanent%');
-        })->count();
-
-        $activeOffices = Employee::where('created_by', $userId)->whereNotNull('office')->where('office', '<>', '')->distinct('office')->count('office');
-        $addedThisMonth = Employee::where('created_by', $userId)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count();
+        $stats = $this->cachedDashboardStats($userId);
+        $totalEmployees = $stats['totalEmployees'];
+        $maleCount = $stats['maleCount'];
+        $femaleCount = $stats['femaleCount'];
+        $otherCount = $stats['otherCount'];
+        $jobOrderCount = $stats['jobOrderCount'];
+        $regularCount = $stats['regularCount'];
+        $activeOffices = $stats['activeOffices'];
+        $addedThisMonth = $stats['addedThisMonth'];
+        $monthlyIntake = $stats['monthlyIntake'];
+        $maleTrend = $stats['maleTrend'];
+        $femaleTrend = $stats['femaleTrend'];
+        $typeTrend = $stats['typeTrend'];
+        $officeStats = $stats['officeStats'];
+        $officeChart = $stats['officeChart'];
+        $officeCompletion = $stats['officeCompletion'];
+        $importSummary = $stats['importSummary'];
+        $months = $stats['months'];
 
         $incompleteQueue = Employee::incomplete()
             ->where('created_by', $userId)
@@ -74,90 +68,9 @@ class UserPortalController extends Controller
             ? (int) round(($completeRecords / $totalEmployees) * 100)
             : 0;
 
-        $officeCompletion = $this->admin->officeCompletionStats(
-            Employee::where('created_by', $userId)->with(['personalInformation', 'workExperience', 'latestWorkExperience'])->get()
-        );
-
-        $importSummary = ImportHistory::query()
-            ->where('created_by', $userId)
-            ->selectRaw('count(*) as total')
-            ->selectRaw("sum(case when status = 'completed' then 1 else 0 end) as completed")
-            ->selectRaw("sum(case when status = 'failed' then 1 else 0 end) as failed")
-            ->first();
-
-        $months = collect(range(5, 0))
-            ->map(fn (int $offset) => now()->startOfMonth()->subMonths($offset))
-            ->values();
-
-        $monthlyIntake = $months->map(function (Carbon $month) use ($userId) {
-            return Employee::where('created_by', $userId)
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->count();
-        });
-
-        $maleTrend = $months->map(function (Carbon $month) use ($userId) {
-            return Employee::where('created_by', $userId)
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->where('sex_at_birth', 'Male')
-                ->count();
-        });
-
-        $femaleTrend = $months->map(function (Carbon $month) use ($userId) {
-            return Employee::where('created_by', $userId)
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->where('sex_at_birth', 'Female')
-                ->count();
-        });
-
-        $typeTrend = [
-            'Job Order' => $months->map(fn(Carbon $month) => Employee::where('created_by', $userId)
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->where(function($query) {
-                    $query->whereNotNull('job_order')
-                          ->whereNotIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None'])
-                          ->orWhereHas('latestWorkExperience', function($q) {
-                              $q->where('status_of_appointment', 'like', '%job order%');
-                          });
-                })->count()),
-            'N/A' => $months->map(fn(Carbon $month) => Employee::where('created_by', $userId)
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->where(function($q) {
-                    $q->where(function($sub) {
-                        $sub->whereNull('job_order')
-                            ->orWhereIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None']);
-                    })->whereDoesntHave('latestWorkExperience', function($sub) {
-                        $sub->where('status_of_appointment', 'like', '%job order%');
-                    });
-                })->where(function($q) {
-                    $q->whereDoesntHave('latestWorkExperience', function($sub) {
-                        $sub->where('status_of_appointment', 'like', '%regular%')
-                            ->orWhere('status_of_appointment', 'like', '%permanent%');
-                    });
-                })->where(function($q) {
-                    $q->whereDoesntHave('latestWorkExperience', function($sub) {
-                        $sub->where('status_of_appointment', 'like', '%plantilla%');
-                    });
-                })->count()),
-        ];
-
-        $officeCounts = Employee::selectRaw('office, count(*) as count')
-            ->where('created_by', $userId)
-            ->whereNotNull('office')
-            ->where('office', '<>', '')
-            ->groupBy('office')
-            ->orderByDesc('count')
-            ->get();
-
-        $officeStats = $officeCounts->pluck('count', 'office')->take(5);
-        $officeChart = $officeCounts->pluck('count', 'office')->take(6);
-
         $recentRecords = Employee::query()
             ->where('created_by', $userId)
+            ->with('latestWorkExperience')
             ->latest()
             ->take(8)
             ->get()
@@ -863,6 +776,137 @@ class UserPortalController extends Controller
             ? route('user.dashboard')
             : route('dashboard');
     }
+
+    private function cachedDashboardStats(int $userId): array
+    {
+        $months = collect(range(5, 0))
+            ->map(fn (int $offset) => now()->startOfMonth()->subMonths($offset))
+            ->values();
+
+        return Cache::remember('user_dashboard_stats_' . $userId, 300, function () use ($userId, $months) {
+            $totalEmployees = Employee::where('created_by', $userId)->count();
+            $maleCount = Employee::where('created_by', $userId)->where('sex_at_birth', 'Male')->count();
+            $femaleCount = Employee::where('created_by', $userId)->where('sex_at_birth', 'Female')->count();
+            $otherCount = Employee::where('created_by', $userId)->whereNotIn('sex_at_birth', ['Male', 'Female'])->orWhereNull('sex_at_birth')->where('created_by', $userId)->count();
+
+            $jobOrderCount = Employee::where('created_by', $userId)->where(function($query) {
+                $query->whereNotNull('job_order')
+                      ->whereNotIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None'])
+                      ->orWhereHas('latestWorkExperience', function($q) {
+                          $q->where('status_of_appointment', 'like', '%job order%');
+                      });
+            })->count();
+
+            $regularCount = Employee::where('created_by', $userId)->whereDoesntHave('latestWorkExperience', function($q) {
+                $q->where('status_of_appointment', 'like', '%job order%');
+            })->where(function($q) {
+                $q->whereNull('job_order')
+                  ->orWhereIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None']);
+            })->whereHas('latestWorkExperience', function($q) {
+                $q->where('status_of_appointment', 'like', '%regular%')
+                  ->orWhere('status_of_appointment', 'like', '%permanent%');
+            })->count();
+
+            $activeOffices = Employee::where('created_by', $userId)->whereNotNull('office')->where('office', '<>', '')->distinct('office')->count('office');
+            $addedThisMonth = Employee::where('created_by', $userId)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count();
+
+            $officeCompletion = $this->admin->officeCompletionStats(
+                Employee::where('created_by', $userId)->with(['personalInformation', 'workExperience', 'latestWorkExperience'])->get()
+            );
+
+            $importSummary = ImportHistory::query()
+                ->where('created_by', $userId)
+                ->selectRaw('count(*) as total')
+                ->selectRaw("sum(case when status = 'completed' then 1 else 0 end) as completed")
+                ->selectRaw("sum(case when status = 'failed' then 1 else 0 end) as failed")
+                ->first();
+
+            $monthlyIntake = $months->map(function (Carbon $month) use ($userId) {
+                return Employee::where('created_by', $userId)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+            });
+
+            $maleTrend = $months->map(function (Carbon $month) use ($userId) {
+                return Employee::where('created_by', $userId)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->where('sex_at_birth', 'Male')
+                    ->count();
+            });
+
+            $femaleTrend = $months->map(function (Carbon $month) use ($userId) {
+                return Employee::where('created_by', $userId)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->where('sex_at_birth', 'Female')
+                    ->count();
+            });
+
+            $typeTrend = [
+                'Job Order' => $months->map(fn(Carbon $month) => Employee::where('created_by', $userId)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->where(function($query) {
+                        $query->whereNotNull('job_order')
+                              ->whereNotIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None'])
+                              ->orWhereHas('latestWorkExperience', function($q) {
+                                  $q->where('status_of_appointment', 'like', '%job order%');
+                              });
+                    })->count()),
+                'N/A' => $months->map(fn(Carbon $month) => Employee::where('created_by', $userId)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->where(function($q) {
+                        $q->where(function($sub) {
+                            $sub->whereNull('job_order')
+                                ->orWhereIn('job_order', ['', 'n/a', 'na', 'none', 'n / a', 'no', 'N/A', 'N / A', 'None']);
+                        })->whereDoesntHave('latestWorkExperience', function($sub) {
+                            $sub->where('status_of_appointment', 'like', '%job order%');
+                        });
+                    })->where(function($q) {
+                        $q->whereDoesntHave('latestWorkExperience', function($sub) {
+                            $sub->where('status_of_appointment', 'like', '%regular%')
+                                ->orWhere('status_of_appointment', 'like', '%permanent%');
+                        });
+                    })->where(function($q) {
+                        $q->whereDoesntHave('latestWorkExperience', function($sub) {
+                            $sub->where('status_of_appointment', 'like', '%plantilla%');
+                        });
+                    })->count()),
+            ];
+
+            $officeCounts = Employee::selectRaw('office, count(*) as count')
+                ->where('created_by', $userId)
+                ->whereNotNull('office')
+                ->where('office', '<>', '')
+                ->groupBy('office')
+                ->orderByDesc('count')
+                ->get();
+
+            return [
+                'totalEmployees' => $totalEmployees,
+                'maleCount' => $maleCount,
+                'femaleCount' => $femaleCount,
+                'otherCount' => $otherCount,
+                'jobOrderCount' => $jobOrderCount,
+                'regularCount' => $regularCount,
+                'activeOffices' => $activeOffices,
+                'addedThisMonth' => $addedThisMonth,
+                'months' => $months,
+                'monthlyIntake' => $monthlyIntake,
+                'maleTrend' => $maleTrend,
+                'femaleTrend' => $femaleTrend,
+                'typeTrend' => $typeTrend,
+                'officeStats' => $officeCounts->pluck('count', 'office')->take(5),
+                'officeChart' => $officeCounts->pluck('count', 'office')->take(6),
+                'officeCompletion' => $officeCompletion,
+                'importSummary' => $importSummary,
+            ];
+        });
+    }
+
     private function initials(?string $name): string
     {
         $parts = collect(explode(' ', (string) $name))
@@ -905,6 +949,112 @@ class UserPortalController extends Controller
         }
 
         return $user->office ? [$user->office] : [];
+    }
+
+    public function reportAnalytics(Request $request): View
+    {
+        $userId = $request->user()->id;
+        $filters = $this->analyticsFilters($request);
+        $query = Employee::query()
+            ->where('created_by', $userId)
+            ->with(['personalInformation', 'workExperience', 'latestWorkExperience', 'user']);
+
+        $filters['status'] = $filters['status'] ?? '';
+        $filters['office'] = $filters['office'] ?? '';
+        $filters['sex'] = $filters['sex'] ?? '';
+        $filters['date_from'] = $filters['date_from'] ?? '';
+        $filters['date_to'] = $filters['date_to'] ?? '';
+        $searchTerm = $filters['q'] ?? '';
+
+        if ($filters['status'] === 'incomplete') {
+            $query->incomplete();
+        } elseif ($filters['status'] === 'complete') {
+            $query->where(function ($q) {
+                $q->whereNotNull('office')->where('office', '<>', '')
+                  ->whereNotNull('profile_photo_path')->where('profile_photo_path', '<>', '')
+                  ->whereHas('workExperience')
+                  ->whereHas('personalInformation', function ($inner) {
+                      $inner->where(function ($c) { $c->whereNotNull('mobile_no')->where('mobile_no', '<>', ''); })
+                            ->orWhere(function ($c) { $c->whereNotNull('email_address')->where('email_address', '<>', ''); });
+                  });
+            });
+        }
+
+        if ($filters['office'] !== '') $query->where('office', $filters['office']);
+        if ($filters['sex'] !== '') $query->where('sex_at_birth', $filters['sex']);
+        if ($filters['date_from'] !== '') $query->where('created_at', '>=', Carbon::parse($filters['date_from'])->startOfDay());
+        if ($filters['date_to'] !== '') $query->where('created_at', '<=', Carbon::parse($filters['date_to'])->endOfDay());
+
+        if ($searchTerm !== '') {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('full_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('job_order', 'like', "%{$searchTerm}%")
+                  ->orWhere('office', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $employees = $query->latest()->get();
+
+        $employees->each(function (Employee $employee) {
+            $employee->record_status = $this->admin->isComplete($employee) ? 'complete' : 'incomplete';
+        });
+
+        $total = $employees->count();
+        $complete = $employees->where('record_status', 'complete')->count();
+        $incomplete = $employees->where('record_status', 'incomplete')->count();
+        $completionRate = $total > 0 ? (int) round(($complete / $total) * 100) : 0;
+        $updatedThisMonth = $employees->filter(fn ($e) => optional($e->updated_at)?->isCurrentMonth())->count();
+        $activeOffices = $employees->pluck('office')->filter()->unique()->count();
+        $topOffice = $employees->pluck('office')->filter()->countBy()->sortDesc()->keys()->first();
+
+        $needsAttention = $employees->where('record_status', 'incomplete')
+            ->groupBy(fn ($e) => $e->office ?: 'Unassigned')
+            ->map(fn ($group, $office) => ['office' => $office, 'count' => $group->count()])
+            ->sortByDesc('count')->values()->take(5);
+
+        return view('user.report-analytics', [
+            'filters' => $filters,
+            'employees' => $employees->take(15),
+            'filteredCount' => $total,
+            'analytics' => [
+                'totals' => [
+                    'records' => $total,
+                    'complete' => $complete,
+                    'incomplete' => $incomplete,
+                    'completion_rate' => $completionRate,
+                    'updated_this_month' => $updatedThisMonth,
+                    'active_offices' => $activeOffices,
+                ],
+                'breakdowns' => [
+                    'offices' => $employees->pluck('office')->filter()->countBy()->sortDesc()->take(6),
+                    'sexes' => collect([
+                        'Male' => $employees->where('sex_at_birth', 'Male')->count(),
+                        'Female' => $employees->where('sex_at_birth', 'Female')->count(),
+                        'Prefer not to say' => $employees->reject(fn($e) => in_array($e->sex_at_birth, ['Male', 'Female']))->count(),
+                    ]),
+                    'submissions' => collect(),
+                ],
+                'insights' => [
+                    $total === 0 ? 'No records match the current filters.' : "{$completionRate}% of your filtered records are complete.",
+                    $topOffice ? "{$topOffice} has the largest share of your filtered records." : 'No office data is available for the current filter set.',
+                    $incomplete > 0 ? "{$incomplete} filtered records still need follow-up." : 'All filtered records are currently complete.',
+                ],
+                'needs_attention' => $needsAttention,
+            ],
+            'officeOptions' => $this->pds->officeOptions(),
+        ]);
+    }
+
+    private function analyticsFilters(Request $request): array
+    {
+        return [
+            'q' => trim((string) $request->query('q')),
+            'office' => trim((string) $request->query('office')),
+            'sex' => trim((string) $request->query('sex')),
+            'status' => trim((string) $request->query('status')),
+            'date_from' => trim((string) $request->query('date_from')),
+            'date_to' => trim((string) $request->query('date_to')),
+        ];
     }
 
     public function showProfile(Request $request): View

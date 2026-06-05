@@ -11,7 +11,19 @@ class ImportHistory extends Model
 {
     use Auditable;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'original_filename',
+        'stored_path',
+        'file_type',
+        'status',
+        'total_rows',
+        'success_rows',
+        'failed_rows',
+        'notes',
+        'error_report_path',
+        'employee_id',
+        'created_by',
+    ];
 
     public function creator(): BelongsTo
     {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Office;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
@@ -37,6 +38,7 @@ class AdminUserController extends Controller
         return view('admin.users.index', [
             'users' => $users,
             'query' => $query,
+            'offices' => Office::pluck('name')->sort()->values()->all(),
         ]);
     }
 
@@ -49,6 +51,7 @@ class AdminUserController extends Controller
             'username' => $validated['username'],
             'email' => $validated['email'] ?: null,
             'role' => $validated['role'],
+            'office' => $validated['office'] ?? null,
             'password' => Hash::make($validated['password']),
             'email_verified_at' => $request->boolean('email_verified_at') ? now() : null,
         ]);
@@ -65,6 +68,7 @@ class AdminUserController extends Controller
             'username' => $validated['username'],
             'email' => $validated['email'] ?: null,
             'role' => $validated['role'],
+            'office' => $validated['office'] ?? null,
             'email_verified_at' => $request->boolean('email_verified_at') ? ($user->email_verified_at ?: now()) : null,
         ]);
 
@@ -108,6 +112,7 @@ class AdminUserController extends Controller
                 Rule::requiredIf(fn () => request('role') === 'user'),
             ],
             'role' => ['required', Rule::in(['admin', 'user'])],
+            'office' => ['nullable', 'string', 'max:255'],
             'password' => [$user ? 'nullable' : 'required', 'string', 'min:8'],
         ];
     }

@@ -9,6 +9,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -25,12 +27,27 @@ class AuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $credentials = $request->validate([
+        $request->validate([
             'login' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'g-recaptcha-response' => ['required', 'string'],
         ]);
 
-        $login = trim($credentials['login']);
+        if (! $this->verifyRecaptcha($request->input('g-recaptcha-response'), $request->ip())) {
+            return back()->withErrors(['g-recaptcha-response' => 'reCAPTCHA verification failed. Please try again.'])->onlyInput('login');
+        }
+
+        $login = trim($request->input('login'));
+        $throttleKey = 'login_attempts_' . Str::lower($login);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 3)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()->withErrors([
+                'login' => "Too many failed attempts. Please try again in {$seconds} seconds.",
+            ])->onlyInput('login');
+        }
+
         $user = User::query()
             ->where('username', $login)
             ->orWhere('email', Str::lower($login))
@@ -38,35 +55,131 @@ class AuthController extends Controller
 
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
         $attempt = [
-            'password' => $credentials['password'],
+            'password' => $request->input('password'),
             $field => $field === 'email' ? Str::lower($login) : $login,
         ];
 
         if (Auth::attempt($attempt, $request->boolean('remember'))) {
+            RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
             $request->session()->forget('url.intended');
             $authenticatedUser = $request->user();
 
-            if ($authenticatedUser?->isUser()) {
-                $this->audit->log('auth', 'user-login', 'User signed in', $request, $authenticatedUser);
+            if ($authenticatedUser?->isAdmin()) {
+                $this->audit->log('auth', 'admin-login', 'Administrator signed in', $request, $authenticatedUser);
+                $request->session()->put('two_factor_pending', false);
 
-                if (! $authenticatedUser->hasVerifiedEmail()) {
-                    return redirect()->route('verification.notice')
-                        ->with('toast_type', 'warning')
-                        ->with('status', 'Verify your email to continue to the user dashboard.');
-                }
+                return redirect()->route('dashboard');
+            }
+
+            $this->audit->log('auth', 'user-login', 'User signed in', $request, $authenticatedUser);
+
+            if (! $authenticatedUser->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice')
+                    ->with('toast_type', 'warning')
+                    ->with('status', 'Verify your email to continue to the user dashboard.');
+            }
+
+            if ($this->isUserDeviceTrusted($request, $authenticatedUser)) {
+                $request->session()->put('two_factor_pending', false);
 
                 return redirect()->route('user.dashboard');
             }
 
-            $this->audit->log('auth', 'admin-login', 'Administrator signed in', $request, $authenticatedUser);
+            $code = $authenticatedUser->generateTwoFactorCode(5);
+            $authenticatedUser->notify(new \App\Notifications\LoginCodeNotification($code, 5));
 
-            return redirect()->route('dashboard');
+            $request->session()->put('two_factor_pending', true);
+
+            return redirect()->route('login.two-factor.show')
+                ->with('status', 'A 6-digit verification code has been sent to your email. It expires in 5 minutes.');
         }
+
+        RateLimiter::hit($throttleKey, 900);
+
+        $this->audit->log('auth', 'login-failed', "Failed login attempt for: {$login}", $request);
 
         return back()
             ->withErrors(['login' => 'Invalid username/email or password.'])
             ->onlyInput('login');
+    }
+
+    private function isUserDeviceTrusted(Request $request, User $user): bool
+    {
+        $token = $request->cookie('trusted_device');
+
+        if ($token === null) {
+            return false;
+        }
+
+        return $user->isCurrentDeviceTrusted($token, $request->userAgent());
+    }
+
+    public function showTwoFactorForm(): View
+    {
+        return view('auth.verify-two-factor');
+    }
+
+    public function verifyTwoFactor(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'code' => ['required', 'digits:6'],
+        ]);
+
+        $user = $request->user();
+
+        if (! $user || ! $user->isUser()) {
+            return redirect()->route('login');
+        }
+
+        if ($user->hasValidTwoFactorCode($request->input('code'))) {
+            $user->clearTwoFactorCode();
+
+            $token = $user->trustCurrentDevice($request);
+
+            $request->session()->put('two_factor_pending', false);
+
+            $this->audit->log('auth', 'two-factor-verified', 'Two-factor authentication verified', $request, $user, User::class, $user->id);
+
+            return redirect()->route('user.dashboard')
+                ->withCookie(cookie('trusted_device', $token, 43200, '/', null, true, true, false, 'Strict'));
+        }
+
+        return back()->withErrors(['code' => 'The verification code is invalid or has expired.']);
+    }
+
+    public function resendTwoFactorCode(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user || ! $user->isUser()) {
+            return redirect()->route('login');
+        }
+
+        $code = $user->generateTwoFactorCode(5);
+        $user->notify(new \App\Notifications\LoginCodeNotification($code, 5));
+
+        $this->audit->log('auth', 'two-factor-resent', 'Two-factor code resent', $request, $user, User::class, $user->id);
+
+        return back()->with('status', 'A fresh 6-digit verification code has been sent to your email. It expires in 5 minutes.');
+    }
+
+    private function verifyRecaptcha(string $token, ?string $ip = null): bool
+    {
+        $secret = config('services.recaptcha.secret_key');
+        if ($secret === null || $secret === '') {
+            return true;
+        }
+
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret' => $secret,
+            'response' => $token,
+            'remoteip' => $ip,
+        ]);
+
+        $result = $response->json();
+
+        return $result['success'] ?? false;
     }
 
     public function logout(Request $request): RedirectResponse

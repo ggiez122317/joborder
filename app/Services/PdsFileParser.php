@@ -8,7 +8,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
-use Smalot\PdfParser\Parser as PdfParser;
 
 class PdsFileParser
 {
@@ -18,12 +17,6 @@ class PdsFileParser
 
     public function parse(UploadedFile $file): array
     {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if ($extension === 'pdf') {
-            return $this->parsePdf($file);
-        }
-
         return $this->parseExcel($file);
     }
 
@@ -112,25 +105,6 @@ class PdsFileParser
             $mapped,
             $this->mapMetaOverrides($meta)
         ));
-    }
-
-    private function parsePdf(UploadedFile $file): array
-    {
-        $text = (new PdfParser())->parseFile($file->getRealPath())->getText();
-
-        return $this->schema->defaultData([
-            'personal' => [
-                'surname' => $this->pdfValue($text, 'SURNAME'),
-                'first_name' => $this->pdfValue($text, 'FIRST NAME'),
-                'middle_name' => $this->pdfValue($text, 'MIDDLE NAME'),
-                'date_of_birth' => $this->normalizeDate($this->pdfValue($text, 'DATE OF BIRTH'), 'Y-m-d'),
-                'place_of_birth' => $this->pdfValue($text, 'PLACE OF BIRTH'),
-                'sex_at_birth' => $this->normalizeSex($this->pdfValue($text, 'SEX AT BIRTH')),
-                'civil_status' => $this->pdfValue($text, 'CIVIL STATUS'),
-                'mobile_no' => $this->pdfValue($text, 'MOBILE NO'),
-                'email_address' => $this->pdfValue($text, 'E-MAIL ADDRESS'),
-            ],
-        ]);
     }
 
     private function mapChildren(array $sheet): array
@@ -306,19 +280,6 @@ class PdsFileParser
         }
 
         return Str::contains(Str::lower($value), 'female') ? 'Female' : (Str::contains(Str::lower($value), 'male') ? 'Male' : $value);
-    }
-
-    private function pdfValue(string $text, string $label): ?string
-    {
-        $pattern = '/' . preg_quote($label, '/') . '\\s*:?\\s*([^\\n\\r]+)/i';
-
-        if (preg_match($pattern, $text, $matches)) {
-            $value = trim($matches[1]);
-
-            return $value === '' ? null : $value;
-        }
-
-        return null;
     }
 
     private function firstFilled(?string ...$values): ?string

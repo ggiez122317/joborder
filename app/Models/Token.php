@@ -21,4 +21,8 @@ class Token extends Model
         'timeUsed', 
         'status', 
     ];
+
+    protected $hidden = [
+        'token',
+    ];
 }

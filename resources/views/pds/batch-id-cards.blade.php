@@ -122,9 +122,9 @@
         }
 
         .nickname {
-            top: 305px;
+            top: 292px;
             font-family: 'LEMON MILK', sans-serif;
-            font-size: 18pt;
+            font-size: 26pt;
             font-weight: 700;
             text-transform: uppercase;
             line-height: 1;
@@ -132,9 +132,9 @@
         }
 
         .fullname {
-            top: 345px;
+            top: 332px;
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 23pt;
+            font-size: 34pt;
             font-weight: 400;
             text-transform: uppercase;
             line-height: 1.1;
@@ -142,9 +142,9 @@
         }
 
         .office {
-            top: 375px;
+            top: 378px;
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 14pt;
+            font-size: 20pt;
             font-weight: 400;
             text-transform: uppercase;
             color: #dc2626;
@@ -172,13 +172,13 @@
 
         .job-order {
             position: absolute;
-            bottom: 102px;
+            bottom: 100px;
             left: 25px;
             width: 100px;
             text-align: center;
             color: #000;
             font-weight: 900;
-            font-size: 6.5pt;
+            font-size: 8pt;
             letter-spacing: -0.1px;
         }
 

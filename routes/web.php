@@ -53,6 +53,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
+    Route::get('/login/two-factor', [AuthController::class, 'showTwoFactorForm'])->name('login.two-factor.show');
+    Route::post('/login/two-factor', [AuthController::class, 'verifyTwoFactor'])->name('login.two-factor.verify');
+    Route::post('/login/two-factor/resend', [AuthController::class, 'resendTwoFactorCode'])
+        ->middleware('throttle:1,1')
+        ->name('login.two-factor.resend');
+
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/offices', OfficePageController::class)->name('offices.index');
@@ -103,11 +109,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/profile/{employee}/export-pdf', [EmployeeController::class, 'exportPdf'])->name('profile.export-pdf');
     });
 
-    Route::middleware(['role:user', 'verified'])->group(function () {
+    Route::middleware(['role:user', 'verified', 'two-factor'])->group(function () {
         Route::get('/portal/dashboard', [UserPortalController::class, 'dashboard'])->name('user.dashboard');
         Route::get('/portal/pds', [UserPortalController::class, 'pdsForm'])->name('user.pds.form');
-        // Route::get('/portal/pds/upload', [UserPortalController::class, 'uploadForm'])->name('user.pds.upload');
-        // Route::post('/portal/pds/upload', [UserPortalController::class, 'parseUpload'])->name('user.pds.upload.parse');
         Route::post('/portal/pds', [UserPortalController::class, 'savePds'])->name('user.pds.save');
         Route::get('/portal/profile-photo/{employee}', [UserPortalController::class, 'photo'])->name('user.profile-photo');
         Route::get('/portal/signature/{employee}', [UserPortalController::class, 'signature'])->name('user.signature');
@@ -118,9 +122,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/portal/records', [UserPortalController::class, 'records'])->name('user.records');
         Route::get('/portal/records/create', [UserPortalController::class, 'createRecord'])->name('user.records.create');
         Route::post('/portal/records', [UserPortalController::class, 'storeRecord'])->name('user.records.store');
-        // Route::get('/portal/records/upload', [UserPortalController::class, 'uploadRecordForm'])->name('user.records.upload');
-        // Route::post('/portal/records/upload', [UserPortalController::class, 'parseRecordUpload'])->name('user.records.upload.parse');
-        
+
         Route::get('/portal/records/{employee}', [UserPortalController::class, 'showRecord'])->name('user.records.show');
         Route::get('/portal/records/{employee}/print', [UserPortalController::class, 'printRecord'])->name('user.records.print');
         Route::get('/portal/records/{employee}/export-pdf', [UserPortalController::class, 'exportPdfRecord'])->name('user.records.export-pdf');
@@ -129,6 +131,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/portal/records/{employee}', [UserPortalController::class, 'updateRecord'])->name('user.records.update');
         Route::delete('/portal/records/{employee}', [UserPortalController::class, 'destroyRecord'])->name('user.records.destroy');
 
+        Route::get('/portal/report-analytics', [UserPortalController::class, 'reportAnalytics'])->name('user.report-analytics');
         Route::get('/portal/profile', [UserPortalController::class, 'showProfile'])->name('user.profile');
         Route::put('/portal/profile', [UserPortalController::class, 'updateProfile'])->name('user.profile.update');
     });

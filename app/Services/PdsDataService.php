@@ -433,10 +433,7 @@ class PdsDataService
 
     public function personalPersistFields(): array
     {
-        return collect($this->personalFields())
-            ->reject(fn (string $field) => $field === 'office' && !Schema::hasColumn('personal_information', 'office'))
-            ->values()
-            ->all();
+        return $this->personalFields();
     }
 
     public function familyFields(): array

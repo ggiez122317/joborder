@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         body {
             margin: 0;
@@ -246,6 +247,13 @@
                             <span>Remember session</span>
                         </label>
                         <a href="{{ route('password.request') }}" class="text-sm font-semibold text-[#15803d] hover:underline">Forgot password?</a>
+                    </div>
+
+                    @if ($errors->has('g-recaptcha-response'))
+                        <p class="text-xs font-semibold text-red-600 text-center">{{ $errors->first('g-recaptcha-response') }}</p>
+                    @endif
+                    <div class="flex justify-center">
+                        <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}" data-theme="light"></div>
                     </div>
 
                     <button type="submit" class="btn-primary w-full">Login</button>

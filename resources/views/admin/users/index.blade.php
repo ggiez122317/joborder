@@ -40,6 +40,15 @@
                     </select>
                 </div>
                 <div>
+                    <label class="form-label" for="office">Assigned Office</label>
+                    <select id="office" name="office" class="form-input">
+                        <option value="">None</option>
+                        @foreach ($offices as $office)
+                            <option value="{{ $office }}" @selected(old('office') === $office)>{{ $office }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="form-label" for="password">Password</label>
                     <input id="password" name="password" type="password" class="form-input">
                 </div>
@@ -83,6 +92,7 @@
                             <th class="border-b border-[#e8edf2] px-4 py-3">Username</th>
                             <th class="border-b border-[#e8edf2] px-4 py-3">Email</th>
                             <th class="border-b border-[#e8edf2] px-4 py-3">Role</th>
+                            <th class="border-b border-[#e8edf2] px-4 py-3">Office</th>
                             <th class="border-b border-[#e8edf2] px-4 py-3">Status</th>
                             <th class="border-b border-[#e8edf2] px-4 py-3">Created</th>
                             <th class="border-b border-[#e8edf2] px-4 py-3 text-right">Actions</th>
@@ -97,29 +107,38 @@
                                 <td class="px-4 py-4">
                                     <span class="inline-flex rounded-full {{ $user->role === 'admin' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#e0f2fe] text-[#075985]' }} px-3 py-1 text-xs font-bold uppercase">{{ $user->role }}</span>
                                 </td>
+                                <td class="px-4 py-4 text-[#475569]">{{ $user->office ?: '—' }}</td>
                                 <td class="px-4 py-4">
                                     <span class="inline-flex rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-bold uppercase text-[#475569]">{{ $user->email_verified_at ? 'Verified' : 'Unverified' }}</span>
                                 </td>
                                 <td class="px-4 py-4 text-[#64748b]">{{ optional($user->created_at)->format('M d, Y') ?: 'N/A' }}</td>
                                 <td class="px-4 py-4">
                                     <div class="flex justify-end gap-2">
-                                        <details class="relative">
-                                            <summary class="btn-secondary cursor-pointer list-none px-3 py-2 text-xs">Edit</summary>
-                                            <form method="POST" action="{{ route('admin.users.update', $user) }}" class="absolute right-0 z-20 mt-2 grid w-[360px] gap-3 rounded-[8px] border border-[#e8edf2] bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-                                                @csrf
-                                                @method('PUT')
-                                                <div>
-                                                    <label class="form-label">Name</label>
-                                                    <input name="name" value="{{ old('name', $user->name) }}" class="form-input">
+                                        <button type="button" class="btn-secondary px-3 py-2 text-xs" onclick="document.getElementById('editUserModal{{ $user->id }}').showModal()">Edit</button>
+                                        <dialog id="editUserModal{{ $user->id }}" class="w-[min(92vw,420px)] rounded-[12px] border border-[#e8edf2] p-0 shadow-[0_24px_70px_rgba(15,23,42,0.24)] backdrop:bg-[#0f172a]/45">
+                                            <section class="bg-white">
+                                                <div class="flex items-center justify-between border-b border-[#e8edf2] px-5 py-4">
+                                                    <div>
+                                                        <div class="text-base font-bold text-[#0f172a]">Edit User</div>
+                                                        <div class="mt-1 text-xs text-[#64748b]">{{ $user->name }}</div>
+                                                    </div>
+                                                    <button type="button" class="rounded-[8px] border border-[#e8edf2] px-3 py-1.5 text-sm font-semibold text-[#64748b]" onclick="document.getElementById('editUserModal{{ $user->id }}').close()">Close</button>
                                                 </div>
-                                                <div>
-                                                    <label class="form-label">Username</label>
-                                                    <input name="username" value="{{ old('username', $user->username) }}" class="form-input">
-                                                </div>
-                                                <div>
-                                                    <label class="form-label">Email</label>
-                                                    <input name="email" type="email" value="{{ old('email', $user->email) }}" class="form-input">
-                                                </div>
+                                                <form method="POST" action="{{ route('admin.users.update', $user) }}" class="grid max-h-[75vh] gap-4 overflow-y-auto p-5">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <div>
+                                                        <label class="form-label">Name</label>
+                                                        <input name="name" value="{{ old('name', $user->name) }}" class="form-input">
+                                                    </div>
+                                                    <div>
+                                                        <label class="form-label">Username</label>
+                                                        <input name="username" value="{{ old('username', $user->username) }}" class="form-input">
+                                                    </div>
+                                                    <div>
+                                                        <label class="form-label">Email</label>
+                                                        <input name="email" type="email" value="{{ old('email', $user->email) }}" class="form-input">
+                                                    </div>
                                                 <div>
                                                     <label class="form-label">Role</label>
                                                     <select name="role" class="form-input">
@@ -127,13 +146,23 @@
                                                         <option value="user" @selected(old('role', $user->role) === 'user')>User</option>
                                                     </select>
                                                 </div>
+                                                <div>
+                                                    <label class="form-label">Assigned Office</label>
+                                                    <select name="office" class="form-input">
+                                                        <option value="">None</option>
+                                                        @foreach ($offices as $office)
+                                                            <option value="{{ $office }}" @selected(old('office', $user->office) === $office)>{{ $office }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                                 <label class="flex items-center gap-2 text-sm font-semibold text-[#475569]">
-                                                    <input type="checkbox" name="email_verified_at" value="1" @checked(old('email_verified_at', (bool) $user->email_verified_at))>
-                                                    <span>Email verified</span>
-                                                </label>
-                                                <button type="submit" class="btn-primary w-full">Save Details</button>
-                                            </form>
-                                        </details>
+                                                        <input type="checkbox" name="email_verified_at" value="1" @checked(old('email_verified_at', (bool) $user->email_verified_at))>
+                                                        <span>Email verified</span>
+                                                    </label>
+                                                    <button type="submit" class="btn-primary w-full">Save Details</button>
+                                                </form>
+                                            </section>
+                                        </dialog>
 
                                         <button type="button" class="btn-secondary px-3 py-2 text-xs" onclick="document.getElementById('passwordUserModal{{ $user->id }}').showModal()">Password</button>
                                         <dialog id="passwordUserModal{{ $user->id }}" class="w-[min(92vw,420px)] rounded-[12px] border border-[#e8edf2] p-0 shadow-[0_24px_70px_rgba(15,23,42,0.24)] backdrop:bg-[#0f172a]/45">
@@ -171,7 +200,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-10 text-center text-sm text-[#64748b]">No users found.</td>
+                                <td colspan="8" class="px-4 py-10 text-center text-sm text-[#64748b]">No users found.</td>
                             </tr>
                         @endforelse
                     </tbody>
