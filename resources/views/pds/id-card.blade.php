@@ -336,6 +336,11 @@
             height: 100%;
             z-index: 10;
             pointer-events: none;
+            display: none;
+        }
+
+        .id-container-back.has-back-template .back-template-overlay {
+            display: block;
         }
 
         .back-template-overlay div {
