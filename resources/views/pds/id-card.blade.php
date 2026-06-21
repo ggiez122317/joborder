@@ -180,9 +180,11 @@
             background-color: #ffffff;
             @if (\App\Models\IdTemplate::getActiveBackImageUrl())
                 background-image: url('{{ \App\Models\IdTemplate::getActiveBackImageUrl() }}');
-                background-size: 100% 100%;
-                background-repeat: no-repeat;
+            @else
+                background-image: url('{{ \App\Models\IdTemplate::getActiveImageUrl() }}');
             @endif
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
             position: relative;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
