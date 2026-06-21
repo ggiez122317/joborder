@@ -33,10 +33,10 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/brand/logo', [BrandAssetController::class, 'logo'])->name('brand.logo');
 Route::get('/brand/login-background', [BrandAssetController::class, 'loginBackground'])->name('brand.login-background');
-Route::get('/public/profile/{employee}', [EmployeeController::class, 'publicShow'])->name('profile.public');
-Route::get('/public/profile/{employee}/print', [EmployeeController::class, 'publicPrint'])->name('profile.public.print');
-Route::get('/public/profile/{employee}/photo', [EmployeeController::class, 'publicPhoto'])->name('profile.public.photo');
-Route::get('/public/profile/{employee}/signature', [EmployeeController::class, 'publicSignature'])->name('profile.public.signature');
+Route::get('/verify/profile/{employee}', [EmployeeController::class, 'publicShow'])->name('profile.public');
+Route::get('/verify/profile/{employee}/print', [EmployeeController::class, 'publicPrint'])->name('profile.public.print');
+Route::get('/verify/profile/{employee}/photo', [EmployeeController::class, 'publicPhoto'])->name('profile.public.photo');
+Route::get('/verify/profile/{employee}/signature', [EmployeeController::class, 'publicSignature'])->name('profile.public.signature');
 
 Route::middleware('auth')->group(function () {
     Route::post('/portal/notifications/read', [UserPortalController::class, 'markNotificationsRead'])->name('user.notifications.read');
