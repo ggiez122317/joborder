@@ -1,0 +1,14 @@
+# InfinityFree shared hosting: everything lives under htdocs/.
+# This file routes all web traffic into Laravel's public/ directory
+# and blocks direct access to code, config and secrets.
+
+RewriteEngine On
+
+# Never serve secrets, configs or tooling directly.
+RewriteRule ^(\.env.*|composer\.(json|lock)|package(-lock)?\.json|vite\.config\.js|tailwind\.config\.js|postcss\.config\.js|artisan|phpunit\.xml|.*\.md)$ - [F,L]
+# Block code and private storage (sessions, cache, logs, non-public files).
+# NOTE: storage/ itself stays reachable so the public/storage symlink works.
+RewriteRule ^(\.git|app|bootstrap|config|database|docker|node_modules|resources|routes|scratch|storage/(app/private|framework|logs)|tests|vendor)/ - [F,L]
+
+# Everything else goes through Laravel's front controller.
+RewriteRule ^(.*)$ public/$1 [L]

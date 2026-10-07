@@ -15,6 +15,7 @@ use App\Http\Controllers\UserPortalController;
 use App\Http\Controllers\IdTemplateController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -47,6 +48,19 @@ Route::get('/register/{link}/done', [PublicRegistrationController::class, 'succe
 Route::post('/register/{link}', [PublicRegistrationController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('register.store');
+
+// One-time server setup for hosts without SSH (e.g. InfinityFree):
+// visit /setup/<SETUP_TOKEN> once to link storage and run migrations.
+// Remove this route after the site is live if you prefer.
+Route::get('/setup/{token}', function (string $token) {
+    $expected = (string) env('SETUP_TOKEN', '');
+    abort_unless($expected !== '' && hash_equals($expected, $token), 403);
+
+    Artisan::call('storage:link');
+    Artisan::call('migrate', ['--force' => true]);
+
+    return response()->json(['ok' => true]);
+})->name('setup.run');
 
 Route::middleware('auth')->group(function () {
     Route::post('/portal/notifications/read', [UserPortalController::class, 'markNotificationsRead'])->name('user.notifications.read');

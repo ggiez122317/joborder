@@ -1,0 +1,36 @@
+name: Deploy to InfinityFree
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload via FTP (changed files only after first sync)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./
+          server-dir: ./htdocs/
+          exclude: |
+            .git*
+            node_modules/**
+            scratch/**
+            tests/**
+            .env
+            .github/**
+            Dockerfile
+            docker/**
+            render.yaml
+            RENDER_DEPLOY.md
+            INFINITYFREE_DEPLOY.md
