@@ -365,10 +365,11 @@ class EmployeeController extends Controller
         return view('pds.profile', $this->profilePayload($employee));
     }
 
-    public function viewIdCard(Employee $employee)
+    public function viewIdCard(Request $request, Employee $employee)
     {
         $employee->load(['personalInformation', 'familyBackground', 'otherInformation']);
-        return view('pds.id-card', compact('employee'));
+        $showQr = $request->query('qr', '1') !== '0';
+        return view('pds.id-card', compact('employee', 'showQr'));
     }
 
     public function batchViewIdCards(Request $request)
@@ -382,13 +383,15 @@ class EmployeeController extends Controller
             ->with(['personalInformation', 'familyBackground', 'otherInformation'])
             ->get();
 
-        return view('pds.batch-id-cards', compact('employees'));
+        $showQr = $request->query('qr', '1') !== '0';
+        return view('pds.batch-id-cards', compact('employees', 'showQr'));
     }
 
-    public function viewValidIdCard(Employee $employee)
+    public function viewValidIdCard(Request $request, Employee $employee)
     {
         $employee->load(['personalInformation', 'familyBackground', 'otherInformation']);
-        return view('pds.valid-id', compact('employee'));
+        $showQr = $request->query('qr', '1') !== '0';
+        return view('pds.valid-id', compact('employee', 'showQr'));
     }
 
     public function batchViewValidIdCards(Request $request)
@@ -402,7 +405,8 @@ class EmployeeController extends Controller
             ->with(['personalInformation', 'familyBackground', 'otherInformation'])
             ->get();
 
-        return view('pds.batch-valid-ids', compact('employees'));
+        $showQr = $request->query('qr', '1') !== '0';
+        return view('pds.batch-valid-ids', compact('employees', 'showQr'));
     }
 
     public function publicShow(Employee $employee): View

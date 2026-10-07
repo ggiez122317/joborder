@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <title>ID Card - {{ $employee->full_name }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/logo.png') }}">
     <style>
-        @import url('https://fonts.cdnfonts.com/css/lemon-milk');
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Alex+Brush&display=swap');
 
         @page {
@@ -50,6 +50,63 @@
             transform: translateY(-1px);
         }
 
+        .print-menu {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .print-menu > .btn-print {
+            width: 100%;
+        }
+
+        .print-menu-items {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            flex-direction: column;
+            z-index: 1001;
+        }
+
+        .print-menu.open .print-menu-items {
+            display: flex;
+        }
+
+        .print-menu-items button {
+            background: #ffffff;
+            border: none;
+            border-bottom: 1px solid #f1f5f9;
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+        }
+
+        .print-menu-items button:last-child {
+            border-bottom: none;
+        }
+
+        .print-menu-items button:hover {
+            background: #f8fafc;
+        }
+
+        .print-menu-items .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
         .print-grid {
             display: grid;
             grid-template-columns: repeat(2, 3.5in);
@@ -74,7 +131,7 @@
             box-sizing: border-box;
         }
 
-        /* Profile Photo */
+        /* Profile Photo - rounded rect to match template white box */
         .photo-container {
             position: absolute;
             top: 118px;
@@ -82,7 +139,7 @@
             transform: translateX(-50%);
             width: 165px;
             height: 165px;
-            border-radius: 50%;
+            border-radius: 22px;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -97,58 +154,79 @@
             object-fit: cover;
         }
 
-        /* Text Elements */
-        .nickname,
-        .fullname,
-        .office {
+        /* Name block - nickname + full name grouped so they stay centered as one unit */
+        .name-block {
             position: absolute;
-            width: 100%;
+            top: 288px;
             left: 50%;
             transform: translateX(-50%);
+            width: 100%;
             text-align: center;
-            color: #000;
             z-index: 2;
-            padding: 0 10px;
+            padding: 0 12px;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
 
         .nickname {
-            top: 292px;
-            font-family: 'LEMON MILK', sans-serif;
-            font-size: 26pt;
+            font-family: 'Century Gothic', CenturyGothic, AppleGothic, 'Segoe UI', sans-serif;
+            font-size: 24pt;
             font-weight: 700;
-            text-transform: uppercase;
             line-height: 1;
             letter-spacing: 0.5px;
+            color: #000;
+            white-space: nowrap;
         }
 
         .fullname {
-            top: 332px;
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 34pt;
+            font-size: 30pt;
             font-weight: 400;
             text-transform: uppercase;
-            line-height: 1.1;
+            line-height: 1;
             letter-spacing: 1px;
+            color: #14532d;
+            white-space: nowrap;
         }
 
         .office {
-            top: 378px;
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 20pt;
-            font-weight: 400;
+            position: absolute;
+            top: 371px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+            padding: 0 12px;
+            box-sizing: border-box;
+            font-family: 'Myriad Pro', Myriad, 'Segoe UI', Tahoma, sans-serif;
+            font-size: 11pt;
+            font-weight: 600;
             text-transform: uppercase;
-            color: #dc2626;
-            letter-spacing: 0.8px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            line-height: 25px;
+            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
         }
 
-        /* QR Code & Job Order */
+        /* Long position titles step down so they stay inside the green pill */
+        .office-long {
+            font-size: 8.5pt;
+            letter-spacing: 0.3px;
+        }
+
+        /* QR Code & ID Number - tucked in the free lane left of the baked mayor
+           signature (ink starts ~26% width): shared center x (46px) */
         .qr-container {
             position: absolute;
-            bottom: 34px;
-            left: 46px;
-            width: 58px;
-            height: 58px;
+            bottom: 28px;
+            left: 12px;
+            width: 68px;
+            height: 68px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -163,14 +241,19 @@
 
         .job-order {
             position: absolute;
-            bottom: 100px;
-            left: 25px;
-            width: 100px;
+            bottom: 104px;
+            left: 0;
+            width: 92px;
             text-align: center;
             color: #000;
             font-weight: 900;
             font-size: 8pt;
+            line-height: 1.2;
             letter-spacing: -0.1px;
+        }
+
+        .job-order span {
+            color: #dc2626;
         }
 
         /* ID Card Back Styles */
@@ -413,6 +496,20 @@
             text-transform: uppercase !important;
         }
 
+        /* Front-only / back-only printing */
+        body.show-front-only .id-container-back {
+            display: none !important;
+        }
+
+        body.show-back-only .id-container {
+            display: none !important;
+        }
+
+        body.show-front-only .print-grid,
+        body.show-back-only .print-grid {
+            grid-template-columns: repeat(1, 3.5in);
+        }
+
         @media print {
             .no-print {
                 display: none;
@@ -437,7 +534,14 @@
 
 <body>
     <div class="no-print">
-        <button class="btn-print" onclick="window.print()">Print ID Card</button>
+        <div class="print-menu" id="printMenu">
+            <button class="btn-print" type="button" onclick="togglePrintMenu(event)">Print &#9662;</button>
+            <div class="print-menu-items">
+                <button type="button" onclick="printBoth()"><span class="dot" style="background:#16a34a;"></span>Both Sides</button>
+                <button type="button" onclick="printFrontOnly()"><span class="dot" style="background:#2563eb;"></span>Front Only</button>
+                <button type="button" onclick="printBackOnly()"><span class="dot" style="background:#7c3aed;"></span>Back Only</button>
+            </div>
+        </div>
         <form action="{{ route('pds.regenerate-qr', $employee) }}" method="POST" style="display: contents;">
             @csrf
             <button type="submit" class="btn-print" style="background-color: #f59e0b;">Refresh QR (Transparent)</button>
@@ -447,6 +551,13 @@
 
     <div class="print-grid">
         {{-- Front Side --}}
+        @php
+            $frontPosition = trim((string) ($employee->position_title ?: $employee->office));
+            $rawCode = trim((string) $employee->employee_code);
+            $rawJob = trim((string) $employee->job_order);
+            $isPlaceholder = fn ($v) => $v === '' || in_array(strtolower($v), ['none', 'n/a', 'na', 'n / a', 'no', '-']);
+            $frontIdNo = ! $isPlaceholder(strtolower($rawCode)) ? $rawCode : (! $isPlaceholder(strtolower($rawJob)) ? $rawJob : '');
+        @endphp
         <div class="id-container">
             <!-- Profile Photo -->
             <div class="photo-container">
@@ -458,24 +569,28 @@
             </div>
 
             <!-- Text Content -->
-            <div class="nickname">&ldquo;{{ $employee->nickname ?: 'NICKNAME' }}&rdquo;</div>
-            <div class="fullname">{{ strtoupper($employee->first_name) }}
-                {{ $employee->middle_name ? strtoupper(substr($employee->middle_name, 0, 1)) . '.' : '' }}
-                {{ strtoupper($employee->surname) }}{{ $employee->name_extension ? ' ' . strtoupper($employee->name_extension) : '' }}
+            <div class="name-block">
+                <div class="nickname">&ldquo;{{ ucfirst(strtolower($employee->nickname ?: 'NICKNAME')) }}&rdquo;</div>
+                <div class="fullname">{{ strtoupper($employee->first_name) }}
+                    {{ $employee->middle_name ? strtoupper(substr($employee->middle_name, 0, 1)) . '.' : '' }}
+                    {{ strtoupper($employee->surname) }}{{ $employee->name_extension ? ' ' . strtoupper($employee->name_extension) : '' }}
+                </div>
             </div>
-            <div class="office">{{ $employee->office ?: 'Department Office' }}</div>
+            <div class="office {{ strlen($frontPosition) > 22 ? 'office-long' : '' }}">{{ $frontPosition ?: 'Position Title' }}</div>
 
             <!-- QR Code -->
-            @if ($employee->qr_code_path)
+            @if (($showQr ?? true) && $employee->qr_code_path)
                 <div class="qr-container">
                     <img src="{{ asset('storage/' . $employee->qr_code_path) }}">
                 </div>
             @endif
 
-            <!-- Job Order -->
-            <div class="job-order">
-                {{ $employee->job_order ?: 'JO-TRN-0000-000' }}
-            </div>
+            <!-- ID Number (hidden together with QR in No-QR mode) -->
+            @if (($showQr ?? true))
+                <div class="job-order">
+                    ID NO: <span>{{ $frontIdNo ?: 'N/A' }}</span>
+                </div>
+            @endif
         </div>
 
         {{-- Dynamic Back Side --}}
@@ -631,6 +746,33 @@
             </div>
         </div>
     </div>
+    <script>
+        function togglePrintMenu(e) {
+            e.stopPropagation();
+            document.getElementById('printMenu').classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            const m = document.getElementById('printMenu');
+            if (m && m.classList.contains('open') && !m.contains(e.target)) m.classList.remove('open');
+        });
+        function printBoth() {
+            document.body.classList.remove('show-front-only', 'show-back-only');
+            window.print();
+        }
+        function printFrontOnly() {
+            document.body.classList.remove('show-back-only');
+            document.body.classList.add('show-front-only');
+            window.print();
+        }
+        function printBackOnly() {
+            document.body.classList.remove('show-front-only');
+            document.body.classList.add('show-back-only');
+            window.print();
+        }
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('show-front-only', 'show-back-only');
+        });
+    </script>
 </body>
 
 </html>

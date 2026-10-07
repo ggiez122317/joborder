@@ -8,6 +8,8 @@ use App\Http\Controllers\BrandAssetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OfficePageController;
+use App\Http\Controllers\PublicRegistrationController;
+use App\Http\Controllers\RegistrationLinkController;
 use App\Http\Controllers\UserAuthController;
 use App\Http\Controllers\UserPortalController;
 use App\Http\Controllers\IdTemplateController;
@@ -38,6 +40,14 @@ Route::get('/verify/profile/{employee}/print', [EmployeeController::class, 'publ
 Route::get('/verify/profile/{employee}/photo', [EmployeeController::class, 'publicPhoto'])->name('profile.public.photo');
 Route::get('/verify/profile/{employee}/signature', [EmployeeController::class, 'publicSignature'])->name('profile.public.signature');
 
+// Public PDS self-registration (works logged in or not)
+Route::get('/register/{link}', [PublicRegistrationController::class, 'show'])->name('register.form');
+Route::get('/register/{link}/options', [PublicRegistrationController::class, 'options'])->name('register.options');
+Route::get('/register/{link}/done', [PublicRegistrationController::class, 'success'])->name('register.success');
+Route::post('/register/{link}', [PublicRegistrationController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('register.store');
+
 Route::middleware('auth')->group(function () {
     Route::post('/portal/notifications/read', [UserPortalController::class, 'markNotificationsRead'])->name('user.notifications.read');
     Route::get('/portal/notifications/{id}/read', [UserPortalController::class, 'markSingleNotificationRead'])->name('user.notifications.read.single');
@@ -65,6 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/offices', [\App\Http\Controllers\AdminOfficeController::class, 'store'])->name('admin.offices.store');
         Route::put('/admin/offices/{admin_office}', [\App\Http\Controllers\AdminOfficeController::class, 'update'])->name('admin.offices.update');
         Route::delete('/admin/offices/{admin_office}', [\App\Http\Controllers\AdminOfficeController::class, 'destroy'])->name('admin.offices.destroy');
+        Route::get('/admin/registration-links', [RegistrationLinkController::class, 'index'])->name('admin.registration-links.index');
+        Route::post('/admin/registration-links', [RegistrationLinkController::class, 'store'])->name('admin.registration-links.store');
+        Route::delete('/admin/registration-links/{link}', [RegistrationLinkController::class, 'destroy'])->name('admin.registration-links.destroy');
         Route::get('/records', [EmployeeController::class, 'index'])->name('records.index');
         Route::get('/reports/analytics', [EmployeeController::class, 'reportAnalytics'])->name('reports.analytics');
         Route::get('/reports/analytics/export-excel', [EmployeeController::class, 'exportAnalyticsExcel'])->name('reports.analytics.export-excel');
@@ -72,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/import-history/{importHistory}/error-report', [AdminToolsController::class, 'downloadErrorReport'])->name('admin.import-history.error-report');
         Route::get('/admin/incomplete-queue', [AdminToolsController::class, 'incompleteQueue'])->name('admin.incomplete-queue');
         Route::post('/admin/incomplete-queue/{employee}/notify-user', [AdminToolsController::class, 'notifyIncomplete'])->name('admin.incomplete-queue.notify');
+        Route::post('/admin/incomplete-queue/{employee}/mark-reviewed', [AdminToolsController::class, 'markReviewed'])->name('admin.incomplete-queue.reviewed');
         Route::get('/admin/audit-logs', [AdminAuditLogPageController::class, 'index'])->name('admin.audit-logs');
         Route::delete('/admin/audit-logs', [AdminAuditLogPageController::class, 'clear'])->name('admin.audit-logs.clear');
         Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
@@ -96,8 +110,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/id-templates/{template}', [IdTemplateController::class, 'update'])->name('admin.id-templates.update');
         Route::delete('/id-templates/{template}', [IdTemplateController::class, 'destroy'])->name('admin.id-templates.destroy');
 
-        Route::get('/records/batch-id-cards', [EmployeeController::class, 'batchViewIdCards'])->name('pds.records.batch-id-cards');
-        Route::get('/records/batch-valid-ids', [EmployeeController::class, 'batchViewValidIdCards'])->name('pds.records.batch-valid-ids');
+        Route::get('/records/batch-id-cards', [EmployeeController::class, 'batchViewIdCards'])->name('pds.records.batch-id-cards');        Route::get('/records/batch-valid-ids', [EmployeeController::class, 'batchViewValidIdCards'])->name('pds.records.batch-valid-ids');
         Route::get('/records/{employee}', [EmployeeController::class, 'show'])->name('pds.records.show');
         Route::get('/records/{employee}/id-card', [EmployeeController::class, 'viewIdCard'])->name('pds.records.id-card');
         Route::get('/records/{employee}/valid-id', [EmployeeController::class, 'viewValidIdCard'])->name('pds.records.valid-id');

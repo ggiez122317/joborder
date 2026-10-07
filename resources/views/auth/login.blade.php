@@ -4,8 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @if (config('services.recaptcha.enabled', true) && config('services.recaptcha.site_key'))
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @endif
     <style>
         body {
             margin: 0;
@@ -252,9 +255,11 @@
                     @if ($errors->has('g-recaptcha-response'))
                         <p class="text-xs font-semibold text-red-600 text-center">{{ $errors->first('g-recaptcha-response') }}</p>
                     @endif
-                    <div class="flex justify-center">
-                        <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}" data-theme="light"></div>
-                    </div>
+                    @if (config('services.recaptcha.enabled', true) && config('services.recaptcha.site_key'))
+                        <div class="flex justify-center">
+                            <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}" data-theme="light"></div>
+                        </div>
+                    @endif
 
                     <button type="submit" class="btn-primary w-full">Login</button>
                     <div class="login-signup">

@@ -186,14 +186,15 @@ class UserPortalController extends Controller
         ]);
     }
 
-    public function viewIdCard(Employee $employee)
+    public function viewIdCard(Request $request, Employee $employee)
     {
         $user = auth()->user();
         $isHR = $user && ($user->isAdmin() || strcasecmp($user->office ?? '', 'HRMO') === 0);
         abort_unless($isHR, 403, 'Unauthorized access.');
 
         $employee->load(['personalInformation', 'familyBackground', 'otherInformation']);
-        return view('pds.id-card', compact('employee'));
+        $showQr = $request->query('qr', '1') !== '0';
+        return view('pds.id-card', compact('employee', 'showQr'));
     }
 
     public function showRecord(Request $request, Employee $employee): View

@@ -27,13 +27,18 @@ class AuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $request->validate([
+        $rules = [
             'login' => ['required', 'string'],
             'password' => ['required', 'string'],
-            'g-recaptcha-response' => ['required', 'string'],
-        ]);
+        ];
 
-        if (! $this->verifyRecaptcha($request->input('g-recaptcha-response'), $request->ip())) {
+        if (config('services.recaptcha.enabled', true)) {
+            $rules['g-recaptcha-response'] = ['required', 'string'];
+        }
+
+        $request->validate($rules);
+
+        if (config('services.recaptcha.enabled', true) && ! $this->verifyRecaptcha($request->input('g-recaptcha-response'), $request->ip())) {
             return back()->withErrors(['g-recaptcha-response' => 'reCAPTCHA verification failed. Please try again.'])->onlyInput('login');
         }
 
@@ -164,11 +169,19 @@ class AuthController extends Controller
         return back()->with('status', 'A fresh 6-digit verification code has been sent to your email. It expires in 5 minutes.');
     }
 
-    private function verifyRecaptcha(string $token, ?string $ip = null): bool
+    private function verifyRecaptcha(?string $token, ?string $ip = null): bool
     {
+        if (! config('services.recaptcha.enabled', true)) {
+            return true;
+        }
+
         $secret = config('services.recaptcha.secret_key');
         if ($secret === null || $secret === '') {
             return true;
+        }
+
+        if ($token === null || $token === '') {
+            return false;
         }
 
         $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [

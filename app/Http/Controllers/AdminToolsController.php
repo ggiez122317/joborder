@@ -64,8 +64,7 @@ class AdminToolsController extends Controller
         return view('pds.admin.incomplete-queue', compact('employees'));
     }
 
-    public function notifyIncomplete(Request $request, Employee $employee): RedirectResponse
-    {
+    public function notifyIncomplete(Request $request, Employee $employee): RedirectResponse    {
         $missing = $this->admin->incompleteFields($employee);
 
         if ($missing === []) {
@@ -95,6 +94,23 @@ class AdminToolsController extends Controller
         );
 
         return back()->with('status', 'The user was notified to complete the missing PDS details.');
+    }
+
+    public function markReviewed(Request $request, Employee $employee): RedirectResponse
+    {
+        $employee->update(['needs_review' => false]);
+
+        $this->audit->log(
+            'review',
+            'admin-pds-mark-reviewed',
+            'Admin marked PDS record as reviewed: ' . $employee->full_name,
+            $request,
+            $request->user(),
+            Employee::class,
+            $employee->id
+        );
+
+        return back()->with('status', 'Record marked as reviewed.');
     }
 
 }

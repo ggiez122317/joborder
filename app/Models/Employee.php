@@ -13,6 +13,20 @@ class Employee extends Model
 {
     use Auditable;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Employee $employee) {
+            $employee->personalInformation()->delete();
+            $employee->familyBackground()->delete();
+            $employee->otherInformation()->delete();
+            $employee->education()->delete();
+            $employee->eligibility()->delete();
+            $employee->workExperience()->delete();
+            $employee->voluntaryWork()->delete();
+            $employee->trainings()->delete();
+        });
+    }
+
     protected $fillable = [
         'employee_code',
         'full_name',
@@ -25,6 +39,7 @@ class Employee extends Model
         'position_title',
         'office',
         'is_active',
+        'needs_review',
         'sex_at_birth',
         'source_file',
         'qr_code_path',
@@ -36,6 +51,7 @@ class Employee extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'needs_review' => 'boolean',
     ];
 
     public function scopeActive($query)
@@ -136,17 +152,20 @@ class Employee extends Model
     public function scopeIncomplete($query)
     {
         return $query->where(function ($q) {
-            $q->whereNull('office')
-                ->orWhere('office', '')
-                ->orWhereNull('profile_photo_path')
-                ->orWhere('profile_photo_path', '')
-                ->orWhereDoesntHave('workExperience')
-                ->orWhereHas('personalInformation', function ($inner) {
-                    $inner->where(function ($contact) {
-                        $contact->whereNull('mobile_no')->orWhere('mobile_no', '');
-                    })->where(function ($contact) {
-                        $contact->whereNull('email_address')->orWhere('email_address', '');
-                    });
+            $q->where('needs_review', true)
+                ->orWhere(function ($q) {
+                    $q->whereNull('office')
+                        ->orWhere('office', '')
+                        ->orWhereNull('profile_photo_path')
+                        ->orWhere('profile_photo_path', '')
+                        ->orWhereDoesntHave('workExperience')
+                        ->orWhereHas('personalInformation', function ($inner) {
+                            $inner->where(function ($contact) {
+                                $contact->whereNull('mobile_no')->orWhere('mobile_no', '');
+                            })->where(function ($contact) {
+                                $contact->whereNull('email_address')->orWhere('email_address', '');
+                            });
+                        });
                 });
         });
     }

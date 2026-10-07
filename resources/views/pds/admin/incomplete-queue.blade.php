@@ -48,6 +48,12 @@
                             <td class="border-b border-[#e8edf2] px-3 py-3">
                                 <div class="flex flex-wrap gap-2">
                                     <a href="{{ route('pds.edit', $item['employee']) }}" class="btn-primary px-3 py-1">Complete Record</a>
+                                    @if ($item['employee']->needs_review)
+                                        <form method="POST" action="{{ route('admin.incomplete-queue.reviewed', $item['employee']) }}">
+                                            @csrf
+                                            <button type="submit" class="btn-secondary px-3 py-1">Mark Reviewed</button>
+                                        </form>
+                                    @endif
                                     @if ($item['employee']->user_id || $item['employee']->created_by)
                                         <form method="POST" action="{{ route('admin.incomplete-queue.notify', $item['employee']) }}">
                                             @csrf

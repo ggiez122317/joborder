@@ -14,8 +14,154 @@
                 @endif
             </p>
         </div>
-        <a href="{{ route('pds.create') }}" class="btn-primary">Add New PDS</a>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="openShareModal()" class="btn-secondary">Share Registration Link</button>
+            <a href="{{ route('pds.create') }}" class="btn-primary">Add New PDS</a>
+        </div>
     </div>
+
+    <!-- Share Registration Link Modal -->
+    <div id="share-link-modal" class="fixed inset-0 z-50 hidden items-center justify-center" aria-modal="true" role="dialog">
+        <div class="absolute inset-0 bg-[#0f172a]/60" onclick="closeShareModal()"></div>
+        <div class="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#f1f5f9]">
+                <div>
+                    <h3 class="text-base font-bold text-[#0f172a]">Share Registration Link</h3>
+                    <p class="text-xs text-[#64748b] mt-0.5">Anyone with the link can submit a PDS record for HR review.</p>
+                </div>
+                <button type="button" onclick="closeShareModal()" class="ml-4 flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8edf2] text-[#94a3b8] hover:bg-[#f8fafc] hover:text-[#475569] transition">
+                    <svg viewBox="0 0 16 16" class="h-4 w-4 stroke-current" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="px-6 py-5">
+                <form id="share-link-form" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-xs font-semibold text-[#334155] mb-1.5">Label (optional)</label>
+                        <input type="text" name="label" maxlength="100" placeholder="e.g. Job Order batch 2026"
+                            class="w-full rounded-xl border border-[#d7e2ec] px-3 py-2 text-sm outline-none focus:border-[#16a34a] focus:ring-2 focus:ring-[#16a34a]/20">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#334155] mb-1.5">Expires</label>
+                        <select name="expiry_days" class="rounded-xl border border-[#d7e2ec] px-3 py-2 text-sm outline-none focus:border-[#16a34a]">
+                            <option value="7">7 days</option>
+                            <option value="1">1 day</option>
+                            <option value="30">30 days</option>
+                            <option value="0">Never</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#334155] mb-1.5">Max uses</label>
+                        <input type="number" name="max_uses" min="1" max="1000" placeholder="∞"
+                            class="w-24 rounded-xl border border-[#d7e2ec] px-3 py-2 text-sm outline-none focus:border-[#16a34a]">
+                    </div>
+                    <button type="submit" class="rounded-xl bg-[#16a34a] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#15803d]">Generate</button>
+                </form>
+                <div id="share-link-list" class="mt-4 flex flex-col gap-2 max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const shareLinksIndexUrl = @json(route('admin.registration-links.index'));
+        const shareLinksStoreUrl = @json(route('admin.registration-links.store'));
+        const shareCsrf = document.querySelector('#share-link-form input[name="_token"]').value;
+
+        function openShareModal() {
+            const modal = document.getElementById('share-link-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            loadShareLinks();
+        }
+        function closeShareModal() {
+            const modal = document.getElementById('share-link-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+        async function loadShareLinks() {
+            const box = document.getElementById('share-link-list');
+            box.innerHTML = '<p class="text-xs text-[#94a3b8]">Loading links…</p>';
+            try {
+                const res = await fetch(shareLinksIndexUrl, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (!data.links.length) {
+                    box.innerHTML = '<p class="text-xs text-[#94a3b8]">No links yet. Generate one above.</p>';
+                    return;
+                }
+                box.innerHTML = '';
+                data.links.forEach(link => {
+                    const row = document.createElement('div');
+                    row.className = 'rounded-xl border border-[#e8edf2] px-3 py-2.5 text-sm';
+                    const status = link.is_valid
+                        ? '<span class="text-[11px] font-bold text-[#15803d]">ACTIVE</span>'
+                        : '<span class="text-[11px] font-bold text-[#94a3b8]">EXPIRED/REVOKED</span>';
+                    const meta = [
+                        link.label ? '<strong>' + escapeHtml(link.label) + '</strong>' : 'Untitled link',
+                        link.uses + (link.max_uses ? '/' + link.max_uses : '') + ' uses',
+                        link.expires_human ? 'expires ' + escapeHtml(link.expires_human) : 'never expires',
+                    ].join(' &middot; ');
+                    row.innerHTML =
+                        '<div class="flex items-center justify-between gap-2">' +
+                            '<div class="min-w-0"><div class="truncate text-xs text-[#334155]">' + meta + '</div>' +
+                            '<div class="mt-0.5">' + status + '</div></div>' +
+                            '<div class="flex shrink-0 gap-1.5">' +
+                                '<button type="button" data-copy="' + escapeHtml(link.url) + '" class="rounded-lg bg-[#f1f5f9] px-2.5 py-1.5 text-xs font-semibold text-[#475569] hover:bg-[#e2e8f0]">Copy</button>' +
+                                (link.is_active ? '<button type="button" data-revoke="' + escapeHtml(link.revoke_url) + '" class="rounded-lg bg-[#fef2f2] px-2.5 py-1.5 text-xs font-semibold text-[#dc2626] hover:bg-[#fecaca]">Revoke</button>' : '') +
+                            '</div>' +
+                        '</div>';
+                    box.appendChild(row);
+                });
+                box.querySelectorAll('[data-copy]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(btn.getAttribute('data-copy'));
+                            btn.textContent = 'Copied!';
+                        } catch (e) {
+                            prompt('Copy this link:', btn.getAttribute('data-copy'));
+                            return;
+                        }
+                        setTimeout(loadShareLinks, 800);
+                    });
+                });
+                box.querySelectorAll('[data-revoke]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('Revoke this link? It will stop working immediately.')) return;
+                        await fetch(btn.getAttribute('data-revoke'), {
+                            method: 'DELETE',
+                            headers: { 'X-CSRF-TOKEN': shareCsrf, 'Accept': 'application/json' },
+                        });
+                        loadShareLinks();
+                    });
+                });
+            } catch (e) {
+                box.innerHTML = '<p class="text-xs text-[#dc2626]">Could not load links.</p>';
+            }
+        }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        document.getElementById('share-link-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const body = new FormData(form);
+            const res = await fetch(shareLinksStoreUrl, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': shareCsrf, 'Accept': 'application/json' },
+                body: body,
+            });
+            if (res.ok) {
+                form.reset();
+                loadShareLinks();
+            } else {
+                alert('Could not generate the link. Please try again.');
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeShareModal();
+        });
+    </script>
 
     <section class="panel">
         <form method="GET" action="{{ route('records.index') }}" class="flex flex-col gap-3 border-b border-[#1E3A8A] bg-white p-4 md:flex-row">
@@ -112,6 +258,14 @@
                                             <a href="{{ route('pds.records.valid-id', $employee) }}" target="_blank" class="flex items-center gap-2 px-4 py-1.5 text-xs text-slate-700 hover:bg-emerald-50">
                                                 <svg style="width:14px; height:14px; flex-shrink:0;" class="text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                                 Valid ID
+                                            </a>
+                                            <a href="{{ route('pds.records.id-card', $employee) }}?qr=0" target="_blank" class="flex items-center gap-2 px-4 py-1.5 text-xs text-slate-700 hover:bg-sky-50">
+                                                <svg style="width:14px; height:14px; flex-shrink:0;" class="text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
+                                                ID Card (No QR)
+                                            </a>
+                                            <a href="{{ route('pds.records.valid-id', $employee) }}?qr=0" target="_blank" class="flex items-center gap-2 px-4 py-1.5 text-xs text-slate-700 hover:bg-emerald-50">
+                                                <svg style="width:14px; height:14px; flex-shrink:0;" class="text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                                Valid ID (No QR)
                                             </a>
                                             <a href="{{ route('profile.print', $employee) }}" target="_blank" class="flex items-center gap-2 px-4 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
                                                 <svg style="width:14px; height:14px; flex-shrink:0;" class="text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>

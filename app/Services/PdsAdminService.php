@@ -27,6 +27,10 @@ class PdsAdminService
     {
         $missing = [];
 
+        if ($employee->needs_review) {
+            $missing[] = 'pending review';
+        }
+
         if (blank($employee->office)) {
             $missing[] = 'office';
         }

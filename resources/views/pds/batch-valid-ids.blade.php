@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Batch Valid ID Cards</title>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/logo.png') }}">
     <style>
-        @import url('https://fonts.cdnfonts.com/css/lemon-milk');
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Alex+Brush&display=swap');
 
         @page {
@@ -50,6 +50,63 @@
             transform: translateY(-1px);
         }
 
+        .print-menu {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .print-menu > .btn-print {
+            width: 100%;
+        }
+
+        .print-menu-items {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            flex-direction: column;
+            z-index: 1001;
+        }
+
+        .print-menu.open .print-menu-items {
+            display: flex;
+        }
+
+        .print-menu-items button {
+            background: #ffffff;
+            border: none;
+            border-bottom: 1px solid #f1f5f9;
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+        }
+
+        .print-menu-items button:last-child {
+            border-bottom: none;
+        }
+
+        .print-menu-items button:hover {
+            background: #f8fafc;
+        }
+
+        .print-menu-items .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
         .print-grid {
             display: grid;
             grid-template-columns: repeat(2, 2.125in);
@@ -80,7 +137,7 @@
             box-sizing: border-box;
         }
 
-        /* Profile Photo for CR80 */
+        /* Profile Photo for CR80 - rounded rect to match template white box */
         .photo-container {
             position: absolute;
             top: 72px;
@@ -88,7 +145,7 @@
             transform: translateX(-50%);
             width: 95px;
             height: 95px;
-            border-radius: 50%;
+            border-radius: 12px;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -107,58 +164,80 @@
             object-fit: cover;
         }
 
-        /* Text Elements scaled for CR80 */
-        .nickname,
-        .fullname,
-        .office {
+        /* Name block scaled for CR80 - nickname + full name grouped as one centered unit */
+        .name-block {
             position: absolute;
-            width: 100%;
+            top: 177px;
             left: 50%;
             transform: translateX(-50%);
+            width: 100%;
             text-align: center;
             color: #000;
             z-index: 5;
             padding: 0 8px;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
         }
 
         .nickname {
-            top: 180px;
-            font-family: 'LEMON MILK', sans-serif;
+            font-family: 'Century Gothic', CenturyGothic, AppleGothic, 'Segoe UI', sans-serif;
             font-size: 11pt;
             font-weight: 700;
-            text-transform: uppercase;
             line-height: 1;
             letter-spacing: 0.3px;
+            color: #000;
+            white-space: nowrap;
         }
 
         .fullname {
-            top: 205px;
             font-family: 'Bebas Neue', sans-serif;
             font-size: 13pt;
             font-weight: 400;
             text-transform: uppercase;
             line-height: 1;
             letter-spacing: 0.5px;
+            color: #14532d;
+            white-space: nowrap;
         }
 
         .office {
-            top: 223px;
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 9pt;
-            font-weight: 400;
+            position: absolute;
+            top: 227px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+            z-index: 5;
+            padding: 0 8px;
+            box-sizing: border-box;
+            font-family: 'Myriad Pro', Myriad, 'Segoe UI', Tahoma, sans-serif;
+            font-size: 7pt;
+            font-weight: 600;
             text-transform: uppercase;
-            color: #dc2626;
+            color: #ffffff;
             letter-spacing: 0.5px;
+            line-height: 15px;
+            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
         }
 
-        /* QR Code & Job Order scaled for CR80 */
+        /* Long position titles step down so they stay inside the green pill */
+        .office-long {
+            font-size: 5.5pt;
+            letter-spacing: 0.3px;
+        }
+
+        /* QR Code & ID Number scaled for CR80 - tucked in the free lane left of the
+           baked mayor signature: shared center x */
         .qr-container {
             position: absolute;
-            bottom: 17.5px;
-            left: 26.5px;
-            width: 39px;
-            height: 39px;
+            bottom: 17px;
+            left: 7px;
+            width: 41px;
+            height: 41px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -173,14 +252,19 @@
 
         .job-order {
             position: absolute;
-            bottom: 65px;
-            left: 14px;
-            width: 60px;
+            bottom: 64px;
+            left: 0;
+            width: 56px;
             text-align: center;
             color: #000;
             font-weight: 900;
-            font-size: 4pt;
+            font-size: 5pt;
+            line-height: 1.2;
             letter-spacing: -0.1px;
+        }
+
+        .job-order span {
+            color: #dc2626;
         }
 
         /* Signatory Front overlay scaled for CR80 */
@@ -492,12 +576,28 @@
                 padding: 0;
             }
         }
+
+        /* Front-only / back-only printing (remaining cards flow into the grid) */
+        body.show-front-only .id-container-back {
+            display: none !important;
+        }
+
+        body.show-back-only .id-container {
+            display: none !important;
+        }
     </style>
 </head>
 
 <body>
     <div class="no-print">
-        <button class="btn-print" onclick="window.print()">Print Batch ID Cards</button>
+        <div class="print-menu" id="printMenu">
+            <button class="btn-print" type="button" onclick="togglePrintMenu(event)">Print &#9662;</button>
+            <div class="print-menu-items">
+                <button type="button" onclick="printBoth()"><span class="dot" style="background:#16a34a;"></span>Both Sides</button>
+                <button type="button" onclick="printFrontOnly()"><span class="dot" style="background:#2563eb;"></span>Front Only</button>
+                <button type="button" onclick="printBackOnly()"><span class="dot" style="background:#7c3aed;"></span>Back Only</button>
+            </div>
+        </div>
         <button class="btn-print" style="background-color: #4b5563;" onclick="window.close()">Close</button>
     </div>
 
@@ -559,6 +659,12 @@
                 ' ' . strtoupper($employee->surname) . 
                 ($employee->name_extension ? ' ' . strtoupper($employee->name_extension) : '');
             $signatoryName = preg_replace('/\s+/', ' ', $signatoryName);
+
+            $frontPosition = trim((string) ($employee->position_title ?: $employee->office));
+            $rawCode = trim((string) $employee->employee_code);
+            $rawJob = trim((string) $employee->job_order);
+            $isPlaceholder = fn ($v) => $v === '' || in_array(strtolower($v), ['none', 'n/a', 'na', 'n / a', 'no', '-']);
+            $frontIdNo = ! $isPlaceholder(strtolower($rawCode)) ? $rawCode : (! $isPlaceholder(strtolower($rawJob)) ? $rawJob : '');
         @endphp
 
         <div class="print-grid">
@@ -576,34 +682,40 @@
                     @endif
                 </div>
 
-                <!-- Nickname -->
-                <div class="nickname">"{{ $employee->nickname ?: strtok($employee->first_name, ' ') }}"</div>
+                <!-- Nickname + Full Name -->
+                <div class="name-block">
+                    <div class="nickname">"{{ ucfirst(strtolower($employee->nickname ?: strtok($employee->first_name, ' '))) }}"</div>
 
-                <!-- Full Name -->
-                <div class="fullname">
-                    {{ strtoupper($employee->first_name) }}
-                    {{ $employee->middle_name ? strtoupper(substr($employee->middle_name, 0, 1)) . '.' : '' }}
-                    {{ strtoupper($employee->surname) }}{{ $employee->name_extension ? ' ' . strtoupper($employee->name_extension) : '' }}
+                    <!-- Full Name -->
+                    <div class="fullname">
+                        {{ strtoupper($employee->first_name) }}
+                        {{ $employee->middle_name ? strtoupper(substr($employee->middle_name, 0, 1)) . '.' : '' }}
+                        {{ strtoupper($employee->surname) }}{{ $employee->name_extension ? ' ' . strtoupper($employee->name_extension) : '' }}
+                    </div>
                 </div>
 
                 <!-- Department Office -->
-                <div class="office">{{ $employee->office ?: 'LGU TRENTO' }}</div>
+                <div class="office {{ strlen($frontPosition) > 22 ? 'office-long' : '' }}">{{ $frontPosition ?: 'Position Title' }}</div>
 
-                <!-- Job Order -->
-                <div class="job-order">{{ $employee->job_order ?: 'JO-TRN-2026' }}</div>
+                <!-- ID Number (hidden together with QR in No-QR mode) -->
+                @if (($showQr ?? true))
+                    <div class="job-order">ID NO: <span>{{ $frontIdNo ?: 'N/A' }}</span></div>
+                @endif
 
                 <!-- QR Code -->
-                <div class="qr-container">
-                    @if($employee->qr_code_path)
-                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code">
-                    @endif
-                </div>
+                @if (($showQr ?? true))
+                    <div class="qr-container">
+                        @if($employee->qr_code_path)
+                            <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code">
+                        @endif
+                    </div>
+                @endif
 
                 <!-- Front Signatory Block -->
                 <div class="front-signatory-container">
                     <div class="front-signature-img">Kristoffer Calvez</div>
                     <div class="front-signatory-line"></div>
-                    <div class="front-signatory-name">KRISTOFFER E. CALVEZ</div>
+                    <div class="front-signatory-name">KRISTOFFER G. CALVEZ</div>
                     <div class="front-signatory-title">MUNICIPAL MAYOR</div>
                 </div>
             </div>
@@ -702,6 +814,33 @@
             </div>
         </div>
     @endforeach
+    <script>
+        function togglePrintMenu(e) {
+            e.stopPropagation();
+            document.getElementById('printMenu').classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            const m = document.getElementById('printMenu');
+            if (m && m.classList.contains('open') && !m.contains(e.target)) m.classList.remove('open');
+        });
+        function printBoth() {
+            document.body.classList.remove('show-front-only', 'show-back-only');
+            window.print();
+        }
+        function printFrontOnly() {
+            document.body.classList.remove('show-back-only');
+            document.body.classList.add('show-front-only');
+            window.print();
+        }
+        function printBackOnly() {
+            document.body.classList.remove('show-front-only');
+            document.body.classList.add('show-back-only');
+            window.print();
+        }
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('show-front-only', 'show-back-only');
+        });
+    </script>
 </body>
 
 </html>
