@@ -5,7 +5,7 @@ services:
   - type: web
     name: pds-laravel
     runtime: docker
-    plan: starter
+    plan: free # Free tier: sleeps when idle, ephemeral disk (uploads live on R2, sessions in cookies)
     autoDeploy: true
     healthCheckPath: /
     dockerfilePath: ./Dockerfile
