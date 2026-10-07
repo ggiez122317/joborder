@@ -710,7 +710,7 @@
             <!-- Profile Photo -->
             <div class="photo-container">
                 @if ($employee->profile_photo_path)
-                    <img src="{{ asset('storage/' . $employee->profile_photo_path) }}" alt="Profile Photo">
+                    <img src="{{ Storage::url($employee->profile_photo_path) }}" alt="Profile Photo">
                 @else
                     <div
                         style="width: 100%; height: 100%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #475569; font-weight: bold; font-size: 7pt; font-family: 'Bebas Neue', sans-serif;">
@@ -744,7 +744,7 @@
             @if (($showQr ?? true))
                 <div class="qr-container">
                     @if($employee->qr_code_path)
-                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code">
+                        <img src="{{ Storage::url($employee->qr_code_path) }}" alt="QR Code">
                     @endif
                 </div>
             @endif

@@ -168,12 +168,12 @@
                         <div class="mb-4 grid grid-cols-2 gap-4">
                             <div>
                                 <span class="block text-[10px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5 text-center">Front Background</span>
-                                <div class="template-thumbnail" style="background-image: url('{{ asset('storage/' . $activeTemplate->image_path) }}')"></div>
+                                <div class="template-thumbnail" style="background-image: url('{{ Storage::url($activeTemplate->image_path) }}')"></div>
                             </div>
                             <div>
                                 <span class="block text-[10px] font-bold text-[#64748b] uppercase tracking-wider mb-1.5 text-center">Back Background</span>
                                 @if ($activeTemplate->back_image_path)
-                                    <div class="template-thumbnail" style="background-image: url('{{ asset('storage/' . $activeTemplate->back_image_path) }}')"></div>
+                                    <div class="template-thumbnail" style="background-image: url('{{ Storage::url($activeTemplate->back_image_path) }}')"></div>
                                 @else
                                     <div class="template-thumbnail flex flex-col items-center justify-center bg-[#f8fafc] text-[#94a3b8] text-[9.5pt] font-semibold text-center border-dashed border-2 border-[#cbd5e1] p-3 box-sizing-border-box">
                                         <svg viewBox="0 0 16 16" class="h-6 w-6 text-[#94a3b8] fill-none stroke-current mb-1" aria-hidden="true">
@@ -237,12 +237,12 @@
                                     <div class="relative mb-3 grid grid-cols-2 gap-3">
                                         <div>
                                             <span class="block text-[9px] font-bold text-[#64748b] uppercase tracking-wider mb-1 text-center">Front</span>
-                                            <div class="template-thumbnail" style="background-image: url('{{ asset('storage/' . $template->image_path) }}')"></div>
+                                            <div class="template-thumbnail" style="background-image: url('{{ Storage::url($template->image_path) }}')"></div>
                                         </div>
                                         <div>
                                             <span class="block text-[9px] font-bold text-[#64748b] uppercase tracking-wider mb-1 text-center">Back</span>
                                             @if ($template->back_image_path)
-                                                <div class="template-thumbnail" style="background-image: url('{{ asset('storage/' . $template->back_image_path) }}')"></div>
+                                                <div class="template-thumbnail" style="background-image: url('{{ Storage::url($template->back_image_path) }}')"></div>
                                             @else
                                                 <div class="template-thumbnail flex flex-col items-center justify-center bg-[#f8fafc] text-[#94a3b8] text-[8px] font-bold text-center border-dashed border-2 border-[#cbd5e1] p-2">
                                                     CSS Layout Fallback

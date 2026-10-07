@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class IdTemplate extends Model
 {
@@ -27,7 +28,7 @@ class IdTemplate extends Model
         $active = self::where('is_active', true)->first();
 
         if ($active && $active->image_path) {
-            return asset('storage/' . $active->image_path);
+            return Storage::disk('public')->url($active->image_path);
         }
 
         return asset('assets/idv3.jpg');
@@ -43,7 +44,7 @@ class IdTemplate extends Model
         $active = self::where('is_active', true)->first();
 
         if ($active && $active->back_image_path) {
-            return asset('storage/' . $active->back_image_path);
+            return Storage::disk('public')->url($active->back_image_path);
         }
 
         return null;

@@ -562,7 +562,7 @@
             <!-- Profile Photo -->
             <div class="photo-container">
                 @if ($employee->profile_photo_path)
-                    <img src="{{ asset('storage/' . $employee->profile_photo_path) }}">
+                    <img src="{{ Storage::url($employee->profile_photo_path) }}">
                 @else
                     <img src="{{ asset('assets/profile-placeholder.svg') }}">
                 @endif
@@ -581,7 +581,7 @@
             <!-- QR Code -->
             @if (($showQr ?? true) && $employee->qr_code_path)
                 <div class="qr-container">
-                    <img src="{{ asset('storage/' . $employee->qr_code_path) }}">
+                    <img src="{{ Storage::url($employee->qr_code_path) }}">
                 </div>
             @endif
 

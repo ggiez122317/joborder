@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Behind Render's (or any) reverse proxy so https / IP detection works.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserRole::class,
             'two-factor' => \App\Http\Middleware\EnsureTwoFactorVerified::class,
