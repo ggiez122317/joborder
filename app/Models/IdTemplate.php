@@ -28,7 +28,7 @@ class IdTemplate extends Model
         $active = self::where('is_active', true)->first();
 
         if ($active && $active->image_path) {
-            return Storage::disk('public')->url($active->image_path);
+            return $active->getImageUrl();
         }
 
         return asset('assets/idv3.jpg');
@@ -44,9 +44,30 @@ class IdTemplate extends Model
         $active = self::where('is_active', true)->first();
 
         if ($active && $active->back_image_path) {
-            return Storage::disk('public')->url($active->back_image_path);
+            return $active->getBackImageUrl();
         }
 
         return null;
+    }
+
+    public function getImageUrl(): string
+    {
+        return self::getPublicUrl($this->image_path);
+    }
+
+    public function getBackImageUrl(): ?string
+    {
+        return $this->back_image_path
+            ? self::getPublicUrl($this->back_image_path)
+            : null;
+    }
+
+    private static function getPublicUrl(string $path): string
+    {
+        if (config('filesystems.disks.public.driver') === 'local') {
+            return '/storage/'.ltrim($path, '/');
+        }
+
+        return Storage::disk('public')->url($path);
     }
 }
