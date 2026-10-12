@@ -1,4 +1,106 @@
+import html2canvas from 'html2canvas';
+
 // Laravel Vite entry point. The PDS interface uses Blade and minimal inline JavaScript.
+
+const renderIdCard = async (element) => {
+    if (document.fonts?.ready) {
+        await document.fonts.ready;
+    }
+
+    await Promise.all(Array.from(element.querySelectorAll('img')).map((image) => {
+        if (image.complete && image.naturalWidth > 0) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            image.addEventListener('load', resolve, { once: true });
+            image.addEventListener('error', () => reject(new Error('An ID-card image could not be loaded.')), { once: true });
+        });
+    }));
+
+    return html2canvas(element, {
+        backgroundColor: '#ffffff',
+        logging: false,
+        scale: 4,
+        useCORS: true,
+    });
+};
+
+const saveCanvas = (canvas, filename) => {
+    canvas.toBlob((blob) => {
+        if (!blob) {
+            window.alert('The HD image could not be created.');
+            return;
+        }
+
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }, 'image/png');
+};
+
+const downloadIdCard = async (side) => {
+    const front = document.querySelector('.id-container');
+    const back = document.querySelector('.id-container-back');
+    const buttons = document.querySelectorAll('[data-id-download]');
+    const baseName = document.body.dataset.idDownloadName || 'id-card';
+
+    if (!front || !back) {
+        return;
+    }
+
+    buttons.forEach((button) => button.disabled = true);
+
+    try {
+        if (side === 'front') {
+            saveCanvas(await renderIdCard(front), `${baseName}-front-hd.png`);
+            return;
+        }
+
+        if (side === 'back') {
+            saveCanvas(await renderIdCard(back), `${baseName}-back-hd.png`);
+            return;
+        }
+
+        const [frontCanvas, backCanvas] = await Promise.all([
+            renderIdCard(front),
+            renderIdCard(back),
+        ]);
+        const gap = 64;
+        const combined = document.createElement('canvas');
+        combined.width = frontCanvas.width + backCanvas.width + gap;
+        combined.height = Math.max(frontCanvas.height, backCanvas.height);
+
+        const context = combined.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, combined.width, combined.height);
+        context.drawImage(frontCanvas, 0, 0);
+        context.drawImage(backCanvas, frontCanvas.width + gap, 0);
+        saveCanvas(combined, `${baseName}-both-sides-hd.png`);
+    } catch (error) {
+        console.error(error);
+        window.alert(error.message || 'The HD image could not be created.');
+    } finally {
+        buttons.forEach((button) => button.disabled = false);
+    }
+};
+
+document.querySelectorAll('[data-id-download-menu]').forEach((menu) => {
+    menu.querySelector('[data-id-download-toggle]')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        menu.classList.toggle('open');
+    });
+
+    menu.querySelectorAll('[data-id-download]').forEach((button) => {
+        button.addEventListener('click', () => downloadIdCard(button.dataset.idDownload));
+    });
+});
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('[data-id-download-menu].open').forEach((menu) => menu.classList.remove('open'));
+});
 
 (() => {
     document.querySelectorAll('[data-toast]').forEach((toast) => {

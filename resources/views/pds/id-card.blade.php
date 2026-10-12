@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>ID Card - {{ $employee->full_name }}</title>
     <link rel="icon" type="image/png" href="{{ asset('assets/img/logo.png') }}">
+    @vite('resources/js/app.js')
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Alex+Brush&display=swap');
 
@@ -532,7 +533,7 @@
     </style>
 </head>
 
-<body>
+<body data-id-download-name="employee-{{ $employee->id }}-id-card">
     <div class="no-print">
         <div class="print-menu" id="printMenu">
             <button class="btn-print" type="button" onclick="togglePrintMenu(event)">Print &#9662;</button>
@@ -540,6 +541,14 @@
                 <button type="button" onclick="printBoth()"><span class="dot" style="background:#16a34a;"></span>Both Sides</button>
                 <button type="button" onclick="printFrontOnly()"><span class="dot" style="background:#2563eb;"></span>Front Only</button>
                 <button type="button" onclick="printBackOnly()"><span class="dot" style="background:#7c3aed;"></span>Back Only</button>
+            </div>
+        </div>
+        <div class="print-menu" data-id-download-menu>
+            <button class="btn-print" type="button" data-id-download-toggle style="background-color: #2563eb;">Download HD PNG &#9662;</button>
+            <div class="print-menu-items">
+                <button type="button" data-id-download="front"><span class="dot" style="background:#2563eb;"></span>Front Side</button>
+                <button type="button" data-id-download="back"><span class="dot" style="background:#7c3aed;"></span>Back Side</button>
+                <button type="button" data-id-download="both"><span class="dot" style="background:#16a34a;"></span>Both Sides</button>
             </div>
         </div>
         <form action="{{ route('pds.regenerate-qr', $employee) }}" method="POST" style="display: contents;">
