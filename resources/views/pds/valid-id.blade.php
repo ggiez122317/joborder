@@ -634,7 +634,7 @@
             </div>
         </div>
         <div class="print-menu" data-id-download-menu>
-            <button class="btn-print" type="button" data-id-download-toggle style="background-color: #2563eb;">Download HD PNG &#9662;</button>
+            <button class="btn-print" type="button" data-id-download-toggle style="background-color: #2563eb;">Download 600 DPI PNG &#9662;</button>
             <div class="print-menu-items">
                 <button type="button" data-id-download="front"><span class="dot" style="background:#2563eb;"></span>Front Side</button>
                 <button type="button" data-id-download="back"><span class="dot" style="background:#7c3aed;"></span>Back Side</button>

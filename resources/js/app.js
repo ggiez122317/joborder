@@ -2,6 +2,9 @@ import html2canvas from 'html2canvas';
 
 // Laravel Vite entry point. The PDS interface uses Blade and minimal inline JavaScript.
 
+const ID_EXPORT_DPI = 600;
+const CSS_DPI = 96;
+
 const renderIdCard = async (element) => {
     if (document.fonts?.ready) {
         await document.fonts.ready;
@@ -20,8 +23,9 @@ const renderIdCard = async (element) => {
 
     return html2canvas(element, {
         backgroundColor: '#ffffff',
+        imageTimeout: 30000,
         logging: false,
-        scale: 4,
+        scale: ID_EXPORT_DPI / CSS_DPI,
         useCORS: true,
     });
 };
