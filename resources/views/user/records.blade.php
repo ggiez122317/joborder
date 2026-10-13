@@ -37,7 +37,7 @@
                 <tbody>
                     @forelse ($records as $record)
                         <tr class="{{ !$record->is_active ? 'opacity-60' : '' }}">
-                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#14532d]">
+                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#003000]">
                                 {{ $record->full_name }}
                             </td>
                             <td class="border-b border-[#1E3A8A] px-3 py-2">{{ $record->job_order ?: 'N/A' }}</td>

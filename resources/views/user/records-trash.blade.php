@@ -33,7 +33,7 @@
                 <tbody>
                     @forelse ($records as $record)
                         <tr>
-                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#14532d]">
+                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#003000]">
                                 {{ $record->full_name }}
                             </td>
                             <td class="border-b border-[#1E3A8A] px-3 py-2">{{ $record->position_title ?: 'N/A' }}</td>
