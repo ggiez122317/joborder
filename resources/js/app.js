@@ -49,7 +49,9 @@ const saveCanvas = (canvas, filename) => {    canvas.toBlob((blob) => {
 const normalizeIdPhotos = async () => {
     // html2canvas mispaints object-fit: cover inside an overflow-hidden,
     // rounded, translated container (photo comes out shifted/cut in half).
-    // Replicate cover with explicit size + offsets, which it renders exactly.
+    // Replicate cover with explicit size + offsets and drop the
+    // translateX(-50%) centering (exactly half the 165px box goes missing
+    // when the overflow clip doesn't follow the transform).
     const jobs = [];
 
     document.querySelectorAll('.id-container .photo-container img').forEach((img) => {
@@ -58,6 +60,11 @@ const normalizeIdPhotos = async () => {
             return;
         }
 
+        const card = box.closest('.id-container');
+        if (card && card.clientWidth > 0 && box.offsetWidth > 0) {
+            box.style.left = `${Math.round((card.clientWidth - box.offsetWidth) / 2)}px`;
+            box.style.transform = 'none';
+        }
         const loaded = img.complete && img.naturalWidth > 0
             ? Promise.resolve()
             : new Promise((resolve) => {
