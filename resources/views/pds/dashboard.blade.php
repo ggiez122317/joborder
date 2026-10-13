@@ -1107,10 +1107,11 @@
                             @foreach ($officeChart->keys() as $index => $office)
                                 @php
                                     $labelX = $chartLeft + ($index * $barSlot) + ($barSlot / 2);
+                                    $labelY = $chartHeight - ($index % 2 === 0 ? 10 : 22);
                                 @endphp
-                                <text x="{{ round($labelX, 2) }}" y="{{ $chartHeight - 12 }}" text-anchor="middle" font-size="8.5"
+                                <text x="{{ round($labelX, 2) }}" y="{{ $labelY }}" text-anchor="middle" font-size="8"
                                     fill="#94a3b8">
-                                    {{ \Illuminate\Support\Str::limit($office, 10, '') }}
+                                    {{ \Illuminate\Support\Str::limit($office, 12, '') }}<title>{{ $office }}</title>
                                 </text>
                             @endforeach
                         </svg>
