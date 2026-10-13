@@ -123,6 +123,28 @@ class BulkIdExportTest extends TestCase
         $response->assertSee('MUNICIPALITY OF TRENTO', false);
     }
 
+    public function test_batch_id_cards_qr_toggle(): void
+    {
+        $admin = $this->makeAdmin();
+
+        Employee::query()->create([
+            'full_name' => 'QR Toggle', 'first_name' => 'Qr', 'surname' => 'MUONE',
+            'office' => 'ACCOUNTING', 'is_active' => true, 'qr_code_path' => 'qr/sample.svg',
+        ]);
+
+        $with = $this->actingAs($admin)->get(
+            route('pds.records.batch-id-cards', ['office' => 'ACCOUNTING'])
+        );
+        $with->assertOk();
+        $with->assertSee('<div class="qr-container">', false);
+
+        $without = $this->actingAs($admin)->get(
+            route('pds.records.batch-id-cards', ['office' => 'ACCOUNTING', 'qr' => '0'])
+        );
+        $without->assertOk();
+        $without->assertDontSee('<div class="qr-container">', false);
+    }
+
     public function test_records_index_filters_by_office_server_side(): void
     {
         $admin = $this->makeAdmin();

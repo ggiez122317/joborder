@@ -192,6 +192,10 @@
                     <label class="flex items-center gap-1"><input type="radio" name="side" value="front"> Front</label>
                     <label class="flex items-center gap-1"><input type="radio" name="side" value="back"> Back</label>
                 </div>
+                <div class="flex items-center gap-3 text-xs font-semibold text-[#475569]">
+                    <label class="flex items-center gap-1"><input type="radio" name="qr" value="1" checked> With QR</label>
+                    <label class="flex items-center gap-1"><input type="radio" name="qr" value="0"> No QR</label>
+                </div>
                 <button type="submit" class="btn-primary md:w-52">Export Office IDs</button>
             </form>
         </div>
@@ -395,12 +399,17 @@
             }
         });
 
+        function selectedQr() {
+            return document.querySelector('input[name="qr"]:checked')?.value || '1';
+        }
+
         function batchPrint() {
             const ids = selectedVisibleIds();
             if (ids.length === 0) return;
 
             const url = new URL('{{ route('pds.records.batch-id-cards') }}', window.location.origin);
             ids.forEach(id => url.searchParams.append('ids[]', id));
+            url.searchParams.set('qr', selectedQr());
 
             window.open(url.toString(), '_blank');
         }
@@ -413,6 +422,7 @@
             const url = new URL('{{ route('pds.records.batch-id-cards') }}', window.location.origin);
             ids.forEach(id => url.searchParams.append('ids[]', id));
             url.searchParams.set('side', side);
+            url.searchParams.set('qr', selectedQr());
 
             window.open(url.toString(), '_blank');
         }
@@ -423,6 +433,7 @@
 
             const url = new URL('{{ route('pds.records.batch-valid-ids') }}', window.location.origin);
             ids.forEach(id => url.searchParams.append('ids[]', id));
+            url.searchParams.set('qr', selectedQr());
 
             window.open(url.toString(), '_blank');
         }
