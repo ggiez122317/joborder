@@ -32,8 +32,7 @@ const renderIdCard = async (element, scale = ID_EXPORT_DPI / CSS_DPI) => {
     });
 };
 
-const saveCanvas = (canvas, filename) => {
-    canvas.toBlob((blob) => {
+const saveCanvas = (canvas, filename) => {    canvas.toBlob((blob) => {
         if (!blob) {
             window.alert('The HD image could not be created.');
             return;
@@ -45,6 +44,84 @@ const saveCanvas = (canvas, filename) => {
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }, 'image/png');
+};
+
+const normalizeIdPhotos = async () => {
+    // html2canvas mispaints object-fit: cover inside an overflow-hidden,
+    // rounded, translated container (photo comes out shifted/cut in half).
+    // Replicate cover with explicit size + offsets, which it renders exactly.
+    const jobs = [];
+
+    document.querySelectorAll('.id-container .photo-container img').forEach((img) => {
+        const box = img.closest('.photo-container');
+        if (!box) {
+            return;
+        }
+
+        const loaded = img.complete && img.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true });
+            });
+
+        jobs.push(loaded.then(() => {
+            if (!img.naturalWidth || !img.naturalHeight) {
+                return;
+            }
+
+            const bw = box.clientWidth;
+            const bh = box.clientHeight;
+            if (!bw || !bh) {
+                return;
+            }
+
+            const scale = Math.max(bw / img.naturalWidth, bh / img.naturalHeight);
+            const dw = Math.round(img.naturalWidth * scale);
+            const dh = Math.round(img.naturalHeight * scale);
+
+            img.style.width = `${dw}px`;
+            img.style.height = `${dh}px`;
+            img.style.maxWidth = 'none';
+            img.style.margin = '0';
+            img.style.objectFit = 'fill';
+            img.style.position = 'absolute';
+            img.style.left = `${Math.round((bw - dw) / 2)}px`;
+            img.style.top = `${Math.round((bh - dh) / 2)}px`;
+        }));
+    });
+
+    await Promise.all(jobs);
+};
+
+const fitIdCardText = async () => {
+    if (document.fonts?.ready) {
+        await document.fonts.ready;
+    }
+
+    await normalizeIdPhotos();
+    // Long names/offices use nowrap and spill past the 3.5in card edge.
+    // On screen the spillover looks fine, but canvas/PDF capture clips at
+    // the element box. Shrink oversized lines until they fit inside.
+    document.querySelectorAll('.id-container').forEach((card) => {
+        card.querySelectorAll('.nickname, .fullname, .office').forEach((el) => {
+            el.style.display = 'block';
+            el.style.width = '100%';
+            el.style.maxWidth = '100%';
+
+            if (el.clientWidth === 0) {
+                return;
+            }
+
+            let size = parseFloat(window.getComputedStyle(el).fontSize) || 16;
+            let guard = 0;
+            while (el.scrollWidth > el.clientWidth + 1 && size > 9 && guard < 80) {
+                size -= 1;
+                el.style.fontSize = `${size}px`;
+                guard += 1;
+            }
+        });
+    });
 };
 
 const downloadIdCard = async (side) => {
@@ -61,6 +138,7 @@ const downloadIdCard = async (side) => {
 
     try {
         if (side === 'front') {
+            await fitIdCardText();
             saveCanvas(await renderIdCard(front), `${baseName}-front-hd.png`);
             return;
         }
@@ -70,6 +148,7 @@ const downloadIdCard = async (side) => {
             return;
         }
 
+        await fitIdCardText();
         const [frontCanvas, backCanvas] = await Promise.all([
             renderIdCard(front),
             renderIdCard(back),
@@ -132,6 +211,7 @@ const downloadBatchPdf = async () => {
     buttons.forEach((button) => button.disabled = true);
 
     try {
+        await fitIdCardText();
         const pdf = new jsPDF({ unit: 'in', format: 'a4', orientation: 'portrait' });
 
         for (const [index, element] of queue.entries()) {
@@ -163,6 +243,13 @@ const downloadBatchPdf = async () => {
 document.querySelectorAll('[data-batch-pdf]').forEach((button) => {
     button.addEventListener('click', downloadBatchPdf);
 });
+
+// Fit oversized card text on page load so screen matches the export.
+if (document.fonts?.ready) {
+    document.fonts.ready.then(() => fitIdCardText());
+} else {
+    window.addEventListener('load', () => fitIdCardText());
+}
 
 document.querySelectorAll('[data-id-download-menu]').forEach((menu) => {    menu.querySelector('[data-id-download-toggle]')?.addEventListener('click', (event) => {
         event.stopPropagation();
