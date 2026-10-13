@@ -168,7 +168,12 @@
                         </div>
                         <div>
                             <label class="form-label" for="name_extension">Extension <span style="color:#94a3b8;font-weight:400;">(Jr, Sr, III…)</span></label>
-                            <input id="name_extension" name="name_extension" class="form-input" value="{{ old('name_extension') }}" maxlength="20">
+                            <select id="name_extension" name="name_extension" class="form-input">
+                                <option value="">None</option>
+                                @foreach (['JR', 'SR', 'I', 'II', 'III', 'IV', 'V'] as $ext)
+                                    <option value="{{ $ext }}" @selected(old('name_extension') === $ext)>{{ $ext }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="form-label" for="sex_at_birth">Sex <span class="req">*</span></label>
