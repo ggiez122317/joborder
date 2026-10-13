@@ -93,6 +93,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/registration-links', [RegistrationLinkController::class, 'store'])->name('admin.registration-links.store');
         Route::delete('/admin/registration-links/{link}', [RegistrationLinkController::class, 'destroy'])->name('admin.registration-links.destroy');
         Route::get('/records', [EmployeeController::class, 'index'])->name('records.index');
+        Route::get('/backups', [EmployeeController::class, 'trash'])->name('backups.index');
+        Route::post('/backups/{id}/restore', [EmployeeController::class, 'restore'])->name('backups.restore');
+        Route::delete('/backups/{id}', [EmployeeController::class, 'forceDestroy'])->name('backups.destroy');
         Route::get('/reports/analytics', [EmployeeController::class, 'reportAnalytics'])->name('reports.analytics');
         Route::get('/reports/analytics/export-excel', [EmployeeController::class, 'exportAnalyticsExcel'])->name('reports.analytics.export-excel');
         Route::get('/admin/import-history', [AdminToolsController::class, 'importHistory'])->name('admin.import-history');
@@ -147,6 +150,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/portal/offices', [UserPortalController::class, 'offices'])->name('user.offices');
         Route::get('/portal/offices/staff', [UserPortalController::class, 'officeStaff'])->name('user.offices.staff');
         Route::get('/portal/records', [UserPortalController::class, 'records'])->name('user.records');
+        Route::get('/portal/records/trash', [UserPortalController::class, 'trash'])->name('user.records.trash');
+        Route::post('/portal/records/trash/{id}/restore', [UserPortalController::class, 'restoreRecord'])->name('user.records.restore');
+        Route::delete('/portal/records/trash/{id}', [UserPortalController::class, 'forceDeleteRecord'])->name('user.records.force-destroy');
         Route::get('/portal/records/create', [UserPortalController::class, 'createRecord'])->name('user.records.create');
         Route::post('/portal/records', [UserPortalController::class, 'storeRecord'])->name('user.records.store');
 

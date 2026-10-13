@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('sidebarAdminCounts', $user?->isAdmin()
                 ? Cache::remember('sidebar_counts', 60, fn () => app(PdsAdminService::class)->sidebarCounts())
-                : ['imports' => 0, 'incomplete' => 0]);
+                : ['imports' => 0, 'incomplete' => 0, 'trash' => 0]);
         });
     }
 }

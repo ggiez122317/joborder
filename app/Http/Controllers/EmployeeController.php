@@ -57,7 +57,7 @@ class EmployeeController extends Controller
                 $builder->incomplete();
             })
             ->latest()
-            ->paginate(12)
+            ->paginate(10)
             ->withQueryString();
 
         $employees->getCollection()->transform(function (Employee $employee) {
@@ -72,6 +72,14 @@ class EmployeeController extends Controller
             'query' => $query,
             'office' => $office,
             'scope' => $scope,
+            'officeOptions' => $this->pds->officeOptions($office !== '' ? $office : null),
+            'exportOfficeOptions' => Employee::query()
+                ->whereNotNull('office')
+                ->where('office', '<>', '')
+                ->distinct()
+                ->orderBy('office')
+                ->pluck('office')
+                ->all(),
         ]);
     }
 
@@ -257,9 +265,77 @@ class EmployeeController extends Controller
             ->with('status', 'Personal Data Sheet updated successfully.');
     }
 
-    public function destroy(Employee $employee): RedirectResponse
+    public function destroy(Request $request, Employee $employee): RedirectResponse
     {
-        $targetId = $employee->id;
+        $fullName = $employee->full_name;
+        $employeeId = $employee->id;
+
+        $employee->delete();
+
+        $this->audit->log(
+            'crud',
+            'employee-soft-deleted',
+            'Admin moved PDS record to backup: ' . $fullName,
+            $request,
+            $request->user(),
+            Employee::class,
+            $employeeId
+        );
+
+        return redirect()
+            ->route('records.index')
+            ->with('status', 'PDS record moved to Backup. You can restore it from Backup / Trash.');
+    }
+
+    public function trash(Request $request): View
+    {
+        $query = trim((string) $request->query('q'));
+
+        $employees = Employee::query()
+            ->onlyTrashed()
+            ->with(['personalInformation', 'workExperience', 'latestWorkExperience', 'user'])
+            ->when($query !== '', function ($builder) use ($query) {
+                $builder->where(function ($where) use ($query) {
+                    $where->where('full_name', 'like', "%{$query}%")
+                        ->orWhere('job_order', 'like', "%{$query}%")
+                        ->orWhere('position_title', 'like', "%{$query}%")
+                        ->orWhere('office', 'like', "%{$query}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('pds.backups', [
+            'employees' => $employees,
+            'query' => $query,
+        ]);
+    }
+
+    public function restore(Request $request, int $id): RedirectResponse
+    {
+        $employee = Employee::onlyTrashed()->findOrFail($id);
+        $employee->restore();
+
+        $this->audit->log(
+            'crud',
+            'employee-restored',
+            'Admin restored PDS record from backup: ' . $employee->full_name,
+            $request,
+            $request->user(),
+            Employee::class,
+            $employee->id
+        );
+
+        return redirect()
+            ->route('backups.index')
+            ->with('status', "PDS record for {$employee->full_name} restored successfully.");
+    }
+
+    public function forceDestroy(Request $request, int $id): RedirectResponse
+    {
+        $employee = Employee::onlyTrashed()->findOrFail($id);
+        $fullName = $employee->full_name;
 
         if ($employee->qr_code_path && Storage::disk('public')->exists($employee->qr_code_path)) {
             Storage::disk('public')->delete($employee->qr_code_path);
@@ -273,11 +349,21 @@ class EmployeeController extends Controller
             Storage::disk('public')->delete($employee->e_signature_path);
         }
 
-        $employee->delete();
+        $employee->forceDelete();
+
+        $this->audit->log(
+            'crud',
+            'employee-force-deleted',
+            'Admin permanently deleted PDS record from backup: ' . $fullName,
+            $request,
+            $request->user(),
+            Employee::class,
+            $id
+        );
 
         return redirect()
-            ->route('records.index')
-            ->with('status', 'PDS record deleted successfully.');
+            ->route('backups.index')
+            ->with('status', 'PDS record permanently deleted.');
     }
 
     public function toggleActive(Employee $employee): RedirectResponse
@@ -375,16 +461,31 @@ class EmployeeController extends Controller
     public function batchViewIdCards(Request $request)
     {
         $ids = $request->input('ids', []);
-        if (empty($ids)) {
+        $office = trim((string) $request->query('office', ''));
+        $side = strtolower(trim((string) $request->query('side', 'both')));
+        $side = in_array($side, ['front', 'back'], true) ? $side : 'both';
+
+        if (! empty($ids)) {
+            $employees = Employee::whereIn('id', $ids)
+                ->with(['personalInformation', 'familyBackground', 'otherInformation'])
+                ->orderBy('full_name')
+                ->get();
+        } elseif ($office !== '') {
+            $employees = Employee::where('office', $office)
+                ->with(['personalInformation', 'familyBackground', 'otherInformation'])
+                ->orderBy('full_name')
+                ->limit(100)
+                ->get();
+        } else {
             return redirect()->back()->with('error', 'No records selected.');
         }
 
-        $employees = Employee::whereIn('id', $ids)
-            ->with(['personalInformation', 'familyBackground', 'otherInformation'])
-            ->get();
+        if ($employees->isEmpty()) {
+            return redirect()->back()->with('error', 'No records found for export.');
+        }
 
         $showQr = $request->query('qr', '1') !== '0';
-        return view('pds.batch-id-cards', compact('employees', 'showQr'));
+        return view('pds.batch-id-cards', compact('employees', 'showQr', 'side'));
     }
 
     public function viewValidIdCard(Request $request, Employee $employee)

@@ -20,6 +20,7 @@ class PdsAdminService
                 ->whereIn('status', ['reviewed', 'failed'])
                 ->count(),
             'incomplete' => Employee::incomplete()->count(),
+            'trash' => Employee::onlyTrashed()->count(),
         ];
     }
 

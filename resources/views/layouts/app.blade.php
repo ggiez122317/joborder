@@ -13,7 +13,7 @@
 <body class="app-shell min-h-screen bg-[#f8fafc] text-[#0f172a]">
     @include('partials.toast')
     @php
-        $sidebarAdminCounts = $sidebarAdminCounts ?? ['imports' => 0, 'incomplete' => 0];
+        $sidebarAdminCounts = $sidebarAdminCounts ?? ['imports' => 0, 'incomplete' => 0, 'trash' => 0];
         $authUser = auth()->user();
     @endphp
     <div class="flex min-h-screen">
@@ -105,6 +105,20 @@
                         </svg>
                         <span class="sidebar-label">View Records</span>
                     </a>
+                    <a href="{{ route('backups.index') }}"
+                        class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('backups.*') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">
+                        <svg viewBox="0 0 16 16" class="h-[14px] w-[14px] stroke-current shrink-0" fill="none"
+                            aria-hidden="true">
+                            <path d="M2.5 3.5h11l-1 9a1 1 0 0 1-1 .9H4.5a1 1 0 0 1-1-.9l-1-9Z" stroke-width="1.4"></path>
+                            <path d="M6 3.5V2.7a.7.7 0 0 1 .7-.7h2.6a.7.7 0 0 1 .7.7v.8M6.5 7v4M9.5 7v4" stroke-width="1.3" stroke-linecap="round"></path>
+                        </svg>
+                        <span class="sidebar-label">Backup / Trash</span>
+                        @if (($sidebarAdminCounts['trash'] ?? 0) > 0)
+                            <span class="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full bg-[#fee2e2] px-2 py-0.5 text-[11px] font-bold text-[#991b1b]">
+                                {{ $sidebarAdminCounts['trash'] }}
+                            </span>
+                        @endif
+                    </a>
                     <a href="{{ route('reports.analytics') }}"
                         class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('reports.analytics') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">
                         <svg viewBox="0 0 16 16" class="h-[14px] w-[14px] stroke-current shrink-0" fill="none" aria-hidden="true">
@@ -190,6 +204,14 @@
                             <path d="M5 8.5h6M5 11h4" stroke-width="1.2" stroke-linecap="round"></path>
                         </svg>
                         <span class="sidebar-label">My Records</span>
+                    </a>
+                    <a href="{{ route('user.records.trash') }}"
+                        class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('user.records.trash') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">
+                        <svg viewBox="0 0 16 16" class="h-[14px] w-[14px] stroke-current shrink-0" fill="none" aria-hidden="true">
+                            <path d="M2.5 3.5h11l-1 9a1 1 0 0 1-1 .9H4.5a1 1 0 0 1-1-.9l-1-9Z" stroke-width="1.4"></path>
+                            <path d="M6 3.5V2.7a.7.7 0 0 1 .7-.7h2.6a.7.7 0 0 1 .7.7v.8M6.5 7v4M9.5 7v4" stroke-width="1.3" stroke-linecap="round"></path>
+                        </svg>
+                        <span class="sidebar-label">Trash / Backup</span>
                     </a>
                     <a href="{{ route('user.report-analytics') }}"
                         class="mb-1 flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium {{ request()->routeIs('user.report-analytics') ? 'bg-[#f0fdf4] text-[#15803d]' : 'text-[#64748b]' }}">

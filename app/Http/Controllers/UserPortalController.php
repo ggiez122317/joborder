@@ -244,7 +244,7 @@ class UserPortalController extends Controller
                 });
             })
             ->latest()
-            ->paginate(12)
+            ->paginate(10)
             ->withQueryString();
 
         return view('user.records', [
@@ -409,6 +409,82 @@ class UserPortalController extends Controller
             return back()->withErrors(['delete' => 'You cannot delete your own account PDS record from here.']);
         }
 
+        $fullName = $employee->full_name;
+        $employee->delete();
+
+        $this->audit->log(
+            'crud',
+            'employee-soft-deleted',
+            'User moved PDS record to backup: ' . $fullName,
+            $request,
+            $request->user(),
+            Employee::class,
+            $employee->id
+        );
+
+        return redirect()
+            ->route('user.records')
+            ->with('status', 'PDS record moved to Backup. You can restore it from Trash.');
+    }
+
+    public function trash(Request $request): View
+    {
+        $query = trim((string) $request->query('q'));
+
+        $records = Employee::query()
+            ->onlyTrashed()
+            ->where('created_by', $request->user()->id)
+            ->with(['personalInformation', 'latestWorkExperience'])
+            ->when($query !== '', function ($builder) use ($query) {
+                $builder->where(function ($where) use ($query) {
+                    $where->where('full_name', 'like', "%{$query}%")
+                        ->orWhere('office', 'like', "%{$query}%")
+                        ->orWhere('position_title', 'like', "%{$query}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('user.records-trash', [
+            'records' => $records,
+            'query' => $query,
+        ]);
+    }
+
+    public function restoreRecord(Request $request, int $id): RedirectResponse
+    {
+        $employee = Employee::onlyTrashed()
+            ->where('created_by', $request->user()->id)
+            ->findOrFail($id);
+
+        $employee->restore();
+
+        $this->audit->log(
+            'crud',
+            'employee-restored',
+            'User restored PDS record from backup: ' . $employee->full_name,
+            $request,
+            $request->user(),
+            Employee::class,
+            $employee->id
+        );
+
+        return redirect()
+            ->route('user.records.trash')
+            ->with('status', "PDS record for {$employee->full_name} restored successfully.");
+    }
+
+    public function forceDeleteRecord(Request $request, int $id): RedirectResponse
+    {
+        $employee = Employee::onlyTrashed()
+            ->where('created_by', $request->user()->id)
+            ->findOrFail($id);
+
+        abort_unless((int) $employee->created_by === (int) $request->user()->id, 403);
+
+        $fullName = $employee->full_name;
+
         if ($employee->qr_code_path && Storage::disk('public')->exists($employee->qr_code_path)) {
             Storage::disk('public')->delete($employee->qr_code_path);
         }
@@ -417,11 +493,25 @@ class UserPortalController extends Controller
             Storage::disk('public')->delete($employee->profile_photo_path);
         }
 
-        $employee->delete();
+        if ($employee->e_signature_path && Storage::disk('public')->exists($employee->e_signature_path)) {
+            Storage::disk('public')->delete($employee->e_signature_path);
+        }
+
+        $employee->forceDelete();
+
+        $this->audit->log(
+            'crud',
+            'employee-force-deleted',
+            'User permanently deleted PDS record from backup: ' . $fullName,
+            $request,
+            $request->user(),
+            Employee::class,
+            $id
+        );
 
         return redirect()
-            ->route('user.records')
-            ->with('status', 'PDS record deleted successfully.');
+            ->route('user.records.trash')
+            ->with('status', 'PDS record permanently deleted.');
     }
 
     public function pdsForm(Request $request): View

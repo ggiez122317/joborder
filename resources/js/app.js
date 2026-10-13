@@ -1,11 +1,13 @@
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 // Laravel Vite entry point. The PDS interface uses Blade and minimal inline JavaScript.
 
 const ID_EXPORT_DPI = 600;
 const CSS_DPI = 96;
+const BATCH_EXPORT_SCALE = 3;
 
-const renderIdCard = async (element) => {
+const renderIdCard = async (element, scale = ID_EXPORT_DPI / CSS_DPI) => {
     if (document.fonts?.ready) {
         await document.fonts.ready;
     }
@@ -25,7 +27,7 @@ const renderIdCard = async (element) => {
         backgroundColor: '#ffffff',
         imageTimeout: 30000,
         logging: false,
-        scale: ID_EXPORT_DPI / CSS_DPI,
+        scale,
         useCORS: true,
     });
 };
@@ -91,8 +93,78 @@ const downloadIdCard = async (side) => {
     }
 };
 
-document.querySelectorAll('[data-id-download-menu]').forEach((menu) => {
-    menu.querySelector('[data-id-download-toggle]')?.addEventListener('click', (event) => {
+const downloadBatchPdf = async () => {
+    const side = document.body.dataset.batchSide || 'both';
+    const fronts = Array.from(document.querySelectorAll('.print-grid .id-container'));
+    const backs = Array.from(document.querySelectorAll('.print-grid .id-container-back'));
+    const buttons = document.querySelectorAll('[data-batch-pdf]');
+    const status = document.querySelector('[data-batch-pdf-status]');
+    const fileName = document.body.dataset.batchPdfName || 'id-cards-bulk.pdf';
+
+    // DOM order already pairs front+back per employee; flatten to render order.
+    let queue = [];
+    if (side === 'front') {
+        queue = fronts;
+    } else if (side === 'back') {
+        queue = backs;
+    } else {
+        fronts.forEach((front, index) => {
+            queue.push(front);
+            if (backs[index]) {
+                queue.push(backs[index]);
+            }
+        });
+    }
+
+    if (queue.length === 0) {
+        window.alert('No ID cards found on this page.');
+        return;
+    }
+
+    // A4 sheet (inches) with 10mm margins; cards keep their 3.5 x 5.5in size, 2-up.
+    const margin = 0.394;
+    const cardW = 3.5;
+    const cardH = 5.5;
+    const gap = 0.48;
+    const xPositions = [margin, margin + cardW + gap];
+    const yPosition = 0.5;
+
+    buttons.forEach((button) => button.disabled = true);
+
+    try {
+        const pdf = new jsPDF({ unit: 'in', format: 'a4', orientation: 'portrait' });
+
+        for (const [index, element] of queue.entries()) {
+            if (status) {
+                status.textContent = `Rendering card ${index + 1} of ${queue.length}…`;
+            }
+
+            const canvas = await renderIdCard(element, BATCH_EXPORT_SCALE);
+
+            if (index > 0 && index % 2 === 0) {
+                pdf.addPage('a4', 'portrait');
+            }
+            const x = xPositions[index % 2];
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, yPosition, cardW, cardH);
+        }
+
+        pdf.save(fileName);
+    } catch (error) {
+        console.error(error);
+        window.alert(error.message || 'The combined PDF could not be created.');
+    } finally {
+        buttons.forEach((button) => button.disabled = false);
+        if (status) {
+            status.textContent = '';
+        }
+    }
+};
+
+document.querySelectorAll('[data-batch-pdf]').forEach((button) => {
+    button.addEventListener('click', downloadBatchPdf);
+});
+
+document.querySelectorAll('[data-id-download-menu]').forEach((menu) => {    menu.querySelector('[data-id-download-toggle]')?.addEventListener('click', (event) => {
         event.stopPropagation();
         menu.classList.toggle('open');
     });

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Batch ID Card Printing</title>
     <link rel="icon" type="image/png" href="{{ asset('assets/img/logo.png') }}">
+    @vite(['resources/js/app.js'])
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Alex+Brush&display=swap');
 
@@ -110,9 +111,9 @@
         .print-grid {
             display: grid;
             grid-template-columns: repeat(2, 3.5in);
-            gap: 10mm;
+            gap: 0.48in;
             justify-content: center;
-            padding: 10mm;
+            padding: 0;
         }
 
         .print-page {
@@ -537,8 +538,10 @@
     </style>
 </head>
 
-<body>
+<body data-batch-pdf-name="id-cards-{{ preg_replace('/[^a-z0-9]+/i', '-', strtolower(trim(request('office', 'bulk')) ?: 'bulk')) }}-{{ $side ?? 'both' }}.pdf" data-batch-side="{{ $side ?? 'both' }}">
     <div class="no-print">
+        <button class="btn-print" type="button" data-batch-pdf style="background-color: #2563eb;">Download Combined PDF ({{ count($employees) }})</button>
+        <div data-batch-pdf-status style="font-size: 12px; font-weight: 600; color: #334155; text-align: center;"></div>
         <div class="print-menu" id="printMenu">
             <button class="btn-print" type="button" onclick="togglePrintMenu(event)">Print ({{ count($employees) }} sets) &#9662;</button>
             <div class="print-menu-items">
@@ -550,10 +553,14 @@
         <button class="btn-print" style="background-color: #4b5563;" onclick="window.close()">Close</button>
     </div>
 
-    @foreach ($employees->chunk(2) as $chunk)
+    @php
+        $pageChunks = ($side ?? 'both') === 'both' ? $employees->chunk(1) : $employees->chunk(2);
+    @endphp
+    @foreach ($pageChunks as $chunk)
         <div class="print-page">
             <div class="print-grid">
                 @foreach ($chunk as $employee)
+                    @if (($side ?? 'both') !== 'back')
                     {{-- Front Side --}}
                     @php
                         $frontPosition = trim((string) ($employee->position_title ?: $employee->office));
@@ -596,7 +603,9 @@
                             </div>
                         @endif
                     </div>
+                    @endif
 
+                    @if (($side ?? 'both') !== 'front')
                     {{-- Dynamic Back Side --}}
                     @php
                         $personal = $employee->personalInformation;
@@ -749,6 +758,7 @@
                             @endif
                         </div>
                     </div>
+                    @endif
                 @endforeach
             </div>
         </div>

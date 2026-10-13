@@ -15,6 +15,7 @@
             </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('backups.index') }}" class="btn-secondary">Backup / Trash</a>
             <button type="button" onclick="openShareModal()" class="btn-secondary">Share Registration Link</button>
             <a href="{{ route('pds.create') }}" class="btn-primary">Add New PDS</a>
         </div>
@@ -177,10 +178,31 @@
             <a href="{{ route('records.index', ['scope' => 'incomplete']) }}" class="btn-secondary md:w-44">Incomplete Queue</a>
         </form>
 
+        <div class="flex flex-col gap-3 border-b border-[#e8edf2] bg-[#f8fafc] p-4 md:flex-row md:items-center">
+            <span class="text-xs font-bold uppercase tracking-wider text-[#64748b]">Bulk export ID cards (combined PDF)</span>
+            <form method="GET" action="{{ route('pds.records.batch-id-cards') }}" target="_blank" class="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
+                <select name="office" id="bulk-office-select" class="form-input mt-0 flex-1" required>
+                    <option value="">Select office…</option>
+                    @foreach (($exportOfficeOptions ?? []) as $option)
+                        <option value="{{ $option }}">{{ $option }}</option>
+                    @endforeach
+                </select>
+                <div class="flex items-center gap-3 text-xs font-semibold text-[#475569]">
+                    <label class="flex items-center gap-1"><input type="radio" name="side" value="both" checked> Both sides</label>
+                    <label class="flex items-center gap-1"><input type="radio" name="side" value="front"> Front</label>
+                    <label class="flex items-center gap-1"><input type="radio" name="side" value="back"> Back</label>
+                </div>
+                <button type="submit" class="btn-primary md:w-52">Export Office IDs</button>
+            </form>
+        </div>
+
+        <div id="office-filter-note" class="hidden border-b border-[#e8edf2] bg-[#f0f9ff] px-4 py-2 text-xs font-semibold text-[#0369a1]"></div>
+
         <div class="mb-3 hidden" id="batch-actions">
             <div class="flex flex-wrap items-center gap-3 rounded-lg bg-[#f0f9ff] p-3 border border-[#bae6fd]">
                 <span class="text-sm font-bold text-[#0369a1]" id="selected-count">0 items selected</span>
                 <button type="button" onclick="batchPrint()" class="btn-primary" style="background-color: #0284c7;">Print Selected IDs</button>
+                <button type="button" onclick="batchExportPdf()" class="btn-primary" style="background-color: #1d4ed8;">Export Selected IDs (PDF)</button>
                 <button type="button" onclick="batchPrintValid()" class="btn-primary bg-emerald-600 hover:bg-emerald-700 border-none">Print Selected Valid IDs</button>
             </div>
         </div>
@@ -204,11 +226,11 @@
                 </thead>
                 <tbody>
                     @forelse ($employees as $employee)
-                        <tr class="{{ !$employee->is_active ? 'opacity-60' : '' }} record-row">
+                        <tr class="{{ !$employee->is_active ? 'opacity-60' : '' }} record-row" data-office="{{ $employee->office }}">
                             <td class="border-b border-[#1E3A8A] px-3 py-2">
                                 <input type="checkbox" class="record-checkbox h-4 w-4 rounded border-gray-300" value="{{ $employee->id }}">
                             </td>
-                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold">
+                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#14532d]">
                                 {{ $employee->full_name }}
                             </td>
                             <td class="border-b border-[#1E3A8A] px-3 py-2">{{ $employee->job_order ?: 'N/A' }}</td>
@@ -288,11 +310,11 @@
                                                     @endif
                                                 </button>
                                             </form>
-                                            <form method="POST" action="{{ route('pds.destroy', $employee) }}" onsubmit="return confirm('Delete this PDS record? This cannot be undone.');">
+                                            <form method="POST" action="{{ route('pds.destroy', $employee) }}" onsubmit="return confirm('Move this PDS record to Backup / Trash? You can restore it later.');">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="flex w-full items-center gap-2 px-4 py-1.5 text-xs text-red-600 hover:bg-red-50">
                                                     <svg style="width:14px; height:14px; flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                    Delete
+                                                    Move to Trash
                                                 </button>
                                             </form>
                                         </div>
@@ -315,25 +337,70 @@
     </section>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const selectAll = document.getElementById('select-all');
-            const checkboxes = document.querySelectorAll('.record-checkbox');
+        function visibleRecordRows() {
+            return Array.from(document.querySelectorAll('.record-row')).filter(row => row.style.display !== 'none');
+        }
+
+        function visibleCheckboxes() {
+            return visibleRecordRows().map(row => row.querySelector('.record-checkbox')).filter(cb => cb);
+        }
+
+        function selectedVisibleIds() {
+            return visibleCheckboxes().filter(cb => cb.checked).map(cb => cb.value);
+        }
+
+        function updateBatchUI() {
             const batchActions = document.getElementById('batch-actions');
             const selectedCountLabel = document.getElementById('selected-count');
+            const count = selectedVisibleIds().length;
+            if (count > 0) {
+                batchActions.classList.remove('hidden');
+                selectedCountLabel.textContent = `${count} record(s) selected`;
+            } else {
+                batchActions.classList.add('hidden');
+            }
+        }
 
-            function updateBatchUI() {
-                const checked = document.querySelectorAll('.record-checkbox:checked');
-                if (checked.length > 0) {
-                    batchActions.classList.remove('hidden');
-                    selectedCountLabel.textContent = `${checked.length} record(s) selected`;
+        function applyOfficeFilter() {
+            const officeSelect = document.getElementById('bulk-office-select');
+            const note = document.getElementById('office-filter-note');
+            const selected = officeSelect ? officeSelect.value : '';
+            const rows = document.querySelectorAll('.record-row');
+            let visible = 0;
+
+            rows.forEach(row => {
+                const match = selected === '' || row.dataset.office === selected;
+                row.style.display = match ? '' : 'none';
+                if (match) {
+                    visible++;
                 } else {
-                    batchActions.classList.add('hidden');
+                    const cb = row.querySelector('.record-checkbox');
+                    if (cb) cb.checked = false;
+                }
+            });
+
+            if (note) {
+                if (selected === '') {
+                    note.classList.add('hidden');
+                } else {
+                    note.classList.remove('hidden');
+                    note.textContent = `Showing ${visible} of ${rows.length} row(s) on this page — ${selected}`;
                 }
             }
 
+            const selectAll = document.getElementById('select-all');
+            if (selectAll) selectAll.checked = false;
+            updateBatchUI();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('select-all');
+            const checkboxes = document.querySelectorAll('.record-checkbox');
+            const officeSelect = document.getElementById('bulk-office-select');
+
             if (selectAll) {
                 selectAll.addEventListener('change', function() {
-                    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                    visibleCheckboxes().forEach(cb => cb.checked = selectAll.checked);
                     updateBatchUI();
                 });
             }
@@ -341,24 +408,39 @@
             checkboxes.forEach(cb => {
                 cb.addEventListener('change', updateBatchUI);
             });
+
+            if (officeSelect) {
+                officeSelect.addEventListener('change', applyOfficeFilter);
+                if (officeSelect.value !== '') applyOfficeFilter();
+            }
         });
 
         function batchPrint() {
-            const checked = document.querySelectorAll('.record-checkbox:checked');
-            if (checked.length === 0) return;
+            const ids = selectedVisibleIds();
+            if (ids.length === 0) return;
 
-            const ids = Array.from(checked).map(cb => cb.value);
             const url = new URL('{{ route('pds.records.batch-id-cards') }}', window.location.origin);
             ids.forEach(id => url.searchParams.append('ids[]', id));
 
             window.open(url.toString(), '_blank');
         }
 
-        function batchPrintValid() {
-            const checked = document.querySelectorAll('.record-checkbox:checked');
-            if (checked.length === 0) return;
+        function batchExportPdf() {
+            const ids = selectedVisibleIds();
+            if (ids.length === 0) return;
 
-            const ids = Array.from(checked).map(cb => cb.value);
+            const side = document.querySelector('input[name="side"]:checked')?.value || 'both';
+            const url = new URL('{{ route('pds.records.batch-id-cards') }}', window.location.origin);
+            ids.forEach(id => url.searchParams.append('ids[]', id));
+            url.searchParams.set('side', side);
+
+            window.open(url.toString(), '_blank');
+        }
+
+        function batchPrintValid() {
+            const ids = selectedVisibleIds();
+            if (ids.length === 0) return;
+
             const url = new URL('{{ route('pds.records.batch-valid-ids') }}', window.location.origin);
             ids.forEach(id => url.searchParams.append('ids[]', id));
 

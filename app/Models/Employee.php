@@ -6,24 +6,28 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Traits\Auditable;
 
 class Employee extends Model
 {
     use Auditable;
+    use SoftDeletes;
 
     protected static function booted(): void
     {
         static::deleting(function (Employee $employee) {
-            $employee->personalInformation()->delete();
-            $employee->familyBackground()->delete();
-            $employee->otherInformation()->delete();
-            $employee->education()->delete();
-            $employee->eligibility()->delete();
-            $employee->workExperience()->delete();
-            $employee->voluntaryWork()->delete();
-            $employee->trainings()->delete();
+            if ($employee->isForceDeleting()) {
+                $employee->personalInformation()->delete();
+                $employee->familyBackground()->delete();
+                $employee->otherInformation()->delete();
+                $employee->education()->delete();
+                $employee->eligibility()->delete();
+                $employee->workExperience()->delete();
+                $employee->voluntaryWork()->delete();
+                $employee->trainings()->delete();
+            }
         });
     }
 

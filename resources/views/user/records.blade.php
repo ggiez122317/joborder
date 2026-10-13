@@ -4,6 +4,7 @@
 @section('page_subtitle', 'PDS records you have created for other employees')
 
 @section('page_actions')
+    <a href="{{ route('user.records.trash') }}" class="btn-secondary">Trash / Backup</a>
     <a href="{{ route('user.records.create') }}" class="btn-primary">Add New PDS</a>
 @endsection
 
@@ -36,7 +37,7 @@
                 <tbody>
                     @forelse ($records as $record)
                         <tr class="{{ !$record->is_active ? 'opacity-60' : '' }}">
-                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold">
+                            <td class="border-b border-[#1E3A8A] px-3 py-2 font-semibold text-[#14532d]">
                                 {{ $record->full_name }}
                             </td>
                             <td class="border-b border-[#1E3A8A] px-3 py-2">{{ $record->job_order ?: 'N/A' }}</td>
@@ -55,6 +56,10 @@
                                 <div class="flex flex-wrap gap-2">
                                     <a href="{{ route('user.records.show', $record) }}" class="btn-primary px-3 py-1">View</a>
                                     <a href="{{ route('user.records.edit', $record) }}" class="btn-secondary px-3 py-1">Edit</a>
+                                    <form method="POST" action="{{ route('user.records.destroy', $record) }}" onsubmit="return confirm('Move this record to Trash? You can restore it later.');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="rounded-lg bg-[#fef2f2] px-3 py-1 text-xs font-semibold text-[#dc2626] hover:bg-[#fecaca]">Trash</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
