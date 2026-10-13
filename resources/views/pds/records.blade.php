@@ -184,7 +184,7 @@
                 <select name="office" id="bulk-office-select" class="form-input mt-0 flex-1" required>
                     <option value="">Select office…</option>
                     @foreach (($exportOfficeOptions ?? []) as $option)
-                        <option value="{{ $option }}">{{ $option }}</option>
+                        <option value="{{ $option }}" @selected(($office ?? '') === $option)>{{ $option }}</option>
                     @endforeach
                 </select>
                 <div class="flex items-center gap-3 text-xs font-semibold text-[#475569]">
@@ -195,8 +195,6 @@
                 <button type="submit" class="btn-primary md:w-52">Export Office IDs</button>
             </form>
         </div>
-
-        <div id="office-filter-note" class="hidden border-b border-[#e8edf2] bg-[#f0f9ff] px-4 py-2 text-xs font-semibold text-[#0369a1]"></div>
 
         <div class="mb-3 hidden" id="batch-actions">
             <div class="flex flex-wrap items-center gap-3 rounded-lg bg-[#f0f9ff] p-3 border border-[#bae6fd]">
@@ -363,34 +361,17 @@
 
         function applyOfficeFilter() {
             const officeSelect = document.getElementById('bulk-office-select');
-            const note = document.getElementById('office-filter-note');
             const selected = officeSelect ? officeSelect.value : '';
-            const rows = document.querySelectorAll('.record-row');
-            let visible = 0;
+            const url = new URL('{{ route('records.index') }}', window.location.origin);
 
-            rows.forEach(row => {
-                const match = selected === '' || row.dataset.office === selected;
-                row.style.display = match ? '' : 'none';
-                if (match) {
-                    visible++;
-                } else {
-                    const cb = row.querySelector('.record-checkbox');
-                    if (cb) cb.checked = false;
-                }
-            });
+            // Preserve the current search/scope so the office filter combines with them.
+            const qInput = document.querySelector('input[name="q"]');
+            if (qInput && qInput.value.trim() !== '') url.searchParams.set('q', qInput.value.trim());
+            const scopeInput = document.querySelector('input[name="scope"]');
+            if (scopeInput && scopeInput.value !== '') url.searchParams.set('scope', scopeInput.value);
+            if (selected !== '') url.searchParams.set('office', selected);
 
-            if (note) {
-                if (selected === '') {
-                    note.classList.add('hidden');
-                } else {
-                    note.classList.remove('hidden');
-                    note.textContent = `Showing ${visible} of ${rows.length} row(s) on this page — ${selected}`;
-                }
-            }
-
-            const selectAll = document.getElementById('select-all');
-            if (selectAll) selectAll.checked = false;
-            updateBatchUI();
+            window.location = url.toString();
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -411,7 +392,6 @@
 
             if (officeSelect) {
                 officeSelect.addEventListener('change', applyOfficeFilter);
-                if (officeSelect.value !== '') applyOfficeFilter();
             }
         });
 

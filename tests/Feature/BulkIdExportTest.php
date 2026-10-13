@@ -123,6 +123,27 @@ class BulkIdExportTest extends TestCase
         $response->assertSee('MUNICIPALITY OF TRENTO', false);
     }
 
+    public function test_records_index_filters_by_office_server_side(): void
+    {
+        $admin = $this->makeAdmin();
+
+        Employee::query()->create([
+            'full_name' => 'KAPPAONE FILTERSON', 'first_name' => 'Kappaone', 'surname' => 'Filterson',
+            'office' => 'ACCOUNTING', 'is_active' => true,
+        ]);
+        Employee::query()->create([
+            'full_name' => 'LAMBDAONE OTHERSON', 'first_name' => 'Lambdaone', 'surname' => 'Otherson',
+            'office' => 'HRMO', 'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('records.index', ['office' => 'ACCOUNTING']));
+
+        $response->assertOk();
+        $response->assertSee('KAPPAONE FILTERSON');
+        $response->assertDontSee('LAMBDAONE OTHERSON');
+        $this->assertEquals(1, $response->viewData('employees')->total());
+    }
+
     public function test_records_index_provides_office_options_for_export(): void
     {
         $admin = $this->makeAdmin();
